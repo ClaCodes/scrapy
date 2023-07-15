@@ -43,7 +43,7 @@ def breadth_first(query, min_queue_size):
        n_list = look_up(next_query)["suggestions"]
        print(f"next_query={next_query}, len(query_queue)={len(query_queue)}")
        store_names(n_list)
-       if len(query_queue) < min_queue_size and len(n_list) > 0:
+       if (len(query_queue) < min_queue_size and len(n_list) > 0) or len(n_list) > 15:
            for c in string.ascii_lowercase:
                query_queue.append(next_query + c)
                query_queue.append(next_query + " ")
