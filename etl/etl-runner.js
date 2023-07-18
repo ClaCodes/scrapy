@@ -5,7 +5,7 @@ import {loadSchwingerToFile} from "./load.js";
 await extractSchwinger({
         expanding: 'lastName',
         firstNameToken: '',
-        lastNameStopToken: 'acj',
+        lastNameStopToken: 'zy',
         lastNameToken: 'a',
         maximumNumberOfSuggestions: 15,
         totalOfEvaluatedSearchTokens: 0
