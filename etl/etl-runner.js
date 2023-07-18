@@ -1,15 +1,16 @@
 import {extractSchwinger, fetchSchwinger} from './extract.js';
 import {transformSchwinger} from "./transform.js";
+import {loadSchwingerToFile} from "./load.js";
 
 await extractSchwinger({
         expanding: 'lastName',
-        firstNameStopToken: 'zzz',
         firstNameToken: '',
-        lastNameStopToken: 'abd',
+        lastNameStopToken: 'acj',
         lastNameToken: 'a',
         maximumNumberOfSuggestions: 15,
         totalOfEvaluatedSearchTokens: 0
     },
     fetchSchwinger,
-    transformSchwinger
+    transformSchwinger,
+    loadSchwingerToFile
 );

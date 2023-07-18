@@ -14,7 +14,7 @@
   "main": "extract.js",
   "name": "etl",
   "scripts": {
-    "extract": "node extract-runner.js",
+    "extract": "node etl-runner.js",
     "test": "NODE_OPTIONS=--experimental-vm-modules pnpm jest",
     "test:watch": "npm run test -- --watch"
   },

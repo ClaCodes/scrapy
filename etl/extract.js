@@ -173,10 +173,10 @@ function createSearchToken(searchState) {
 
 export async function extractSchwinger(initialSearchState, fetchSchwinger, transformSchwinger, loadSchwinger) {
     let searchState = initialSearchState;
-    while (
-        searchState.lastNameToken < searchState.lastNameStopToken ||
-        searchState.firstNameToken < searchState.firstNameStopToken
-        ) {
+    const loadConfig = {
+        path: `./dist/${new Date().toISOString()}_schwinger.json`,
+    }
+    while (searchState.lastNameToken < searchState.lastNameStopToken) {
         const searchToken = createSearchToken(searchState);
         const response = await fetchSchwinger(
             `https://zwilch.ch/api/v2/schwinger/${searchToken}`
@@ -187,7 +187,7 @@ export async function extractSchwinger(initialSearchState, fetchSchwinger, trans
             await wait(3000);
         } else {
             const transformedSchwinger = transformSchwinger(response);
-            console.log(transformedSchwinger);
+            const result = await loadSchwinger(transformedSchwinger, loadConfig);
             /**
              * We have the max number of suggestions.
              * This means we have to distinguish between the following cases:
@@ -252,7 +252,7 @@ export async function extractSchwinger(initialSearchState, fetchSchwinger, trans
                 });
             }
             console.log('New search state is:\n', JSON.stringify(searchState));
-            return searchState;
         }
     }
+    return searchState;
 }

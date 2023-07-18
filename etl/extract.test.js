@@ -351,7 +351,12 @@ describe('When extracting data', () => {
                     throw new Error(`Unexpected url: ${url}`);
             }
         }
-        const fakeTransformer = (response) => [];
+        const fakeTransformer = () => [];
+        const fakeLoader = () => ({
+            success: true,
+            numberOfRecords: null,
+
+        });
 
 
         it('should be possible to search from "a " to "abd "', async () => {
@@ -369,6 +374,7 @@ describe('When extracting data', () => {
                 initialSearchState,
                 fakeSchwingerFetcher,
                 fakeTransformer,
+                fakeLoader,
             );
 
             expect(searchState).toEqual({
@@ -397,6 +403,7 @@ describe('When extracting data', () => {
                 initialSearchState,
                 fakeSchwingerFetcher,
                 fakeTransformer,
+                fakeLoader,
             );
 
             expect(searchState).toEqual({
@@ -425,6 +432,7 @@ describe('When extracting data', () => {
                 initialSearchState,
                 fakeSchwingerFetcher,
                 fakeTransformer,
+                fakeLoader,
             );
 
             expect(searchState).toEqual({
@@ -453,6 +461,7 @@ describe('When extracting data', () => {
                 initialSearchState,
                 fakeSchwingerFetcher,
                 fakeTransformer,
+                fakeLoader,
             );
 
             expect(searchState).toEqual({
@@ -481,6 +490,7 @@ describe('When extracting data', () => {
                 initialSearchState,
                 fakeSchwingerFetcher,
                 fakeTransformer,
+                fakeLoader,
             );
 
             expect(searchState).toEqual({
@@ -509,6 +519,7 @@ describe('When extracting data', () => {
                 initialSearchState,
                 fakeSchwingerFetcher,
                 fakeTransformer,
+                fakeLoader,
             );
 
             expect(searchState).toEqual({
