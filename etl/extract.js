@@ -188,6 +188,7 @@ export async function extractSchwinger(initialSearchState, fetchSchwinger, trans
         } else {
             const transformedSchwinger = transformSchwinger(response);
             const result = await loadSchwinger(transformedSchwinger, loadConfig);
+            console.log(result);
             /**
              * We have the max number of suggestions.
              * This means we have to distinguish between the following cases:
@@ -251,7 +252,6 @@ export async function extractSchwinger(initialSearchState, fetchSchwinger, trans
                     searchState.totalOfEvaluatedSearchTokens = searchState.totalOfEvaluatedSearchTokens + 1;
                 });
             }
-            console.log('New search state is:\n', JSON.stringify(searchState));
         }
     }
     return searchState;
