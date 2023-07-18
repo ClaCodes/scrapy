@@ -14,7 +14,7 @@ import {
     response_for_abe_,
     response_for_abf_,
     response_for_ac_, response_for_ach_
-} from "./extract-test-data.js";
+} from "./test-data.js";
 
 describe('When extracting data', () => {
 
@@ -331,26 +331,28 @@ describe('When extracting data', () => {
     })
 
     describe('extracting schwinger', () => {
-        const schwingerFetcher = (url) => {
+        const fakeSchwingerFetcher = (url) => {
             switch (url) {
-                case 'https://zwilch.ch/api/v2/schwinger/a%20':
+                case 'https://zwilch.ch/api/v2/schwinger/a':
                     return Promise.resolve(response_for_a_);
-                case 'https://zwilch.ch/api/v2/schwinger/abd%20':
+                case 'https://zwilch.ch/api/v2/schwinger/abd':
                     return Promise.resolve(response_for_abd_);
-                case 'https://zwilch.ch/api/v2/schwinger/abe%20':
+                case 'https://zwilch.ch/api/v2/schwinger/abe':
                     return Promise.resolve(response_for_abe_);
-                case 'https://zwilch.ch/api/v2/schwinger/abf%20':
+                case 'https://zwilch.ch/api/v2/schwinger/abf':
                     return Promise.resolve(response_for_abf_);
-                case 'https://zwilch.ch/api/v2/schwinger/abg%20':
+                case 'https://zwilch.ch/api/v2/schwinger/abg':
                     return Promise.resolve(response_for_abg_);
-                case 'https://zwilch.ch/api/v2/schwinger/ac%20':
+                case 'https://zwilch.ch/api/v2/schwinger/ac':
                     return Promise.resolve(response_for_ac_);
-                case 'https://zwilch.ch/api/v2/schwinger/ach%20':
+                case 'https://zwilch.ch/api/v2/schwinger/ach':
                     return Promise.resolve(response_for_ach_);
                 default:
                     throw new Error(`Unexpected url: ${url}`);
             }
         }
+        const fakeTransformer = (response) => [];
+
 
         it('should be possible to search from "a " to "abd "', async () => {
             const initialSearchState = {
@@ -363,7 +365,11 @@ describe('When extracting data', () => {
                 totalOfEvaluatedSearchTokens: 0
             }
 
-            const searchState = await extractSchwinger(initialSearchState, schwingerFetcher);
+            const searchState = await extractSchwinger(
+                initialSearchState,
+                fakeSchwingerFetcher,
+                fakeTransformer,
+            );
 
             expect(searchState).toEqual({
                 expanding: 'lastName',
@@ -387,7 +393,11 @@ describe('When extracting data', () => {
                 totalOfEvaluatedSearchTokens: 0
             }
 
-            const searchState = await extractSchwinger(initialSearchState, schwingerFetcher);
+            const searchState = await extractSchwinger(
+                initialSearchState,
+                fakeSchwingerFetcher,
+                fakeTransformer,
+            );
 
             expect(searchState).toEqual({
                 expanding: 'lastName',
@@ -411,7 +421,11 @@ describe('When extracting data', () => {
                 totalOfEvaluatedSearchTokens: 0
             }
 
-            const searchState = await extractSchwinger(initialSearchState, schwingerFetcher);
+            const searchState = await extractSchwinger(
+                initialSearchState,
+                fakeSchwingerFetcher,
+                fakeTransformer,
+            );
 
             expect(searchState).toEqual({
                 expanding: 'lastName',
@@ -435,7 +449,11 @@ describe('When extracting data', () => {
                 totalOfEvaluatedSearchTokens: 0
             }
 
-            const searchState = await extractSchwinger(initialSearchState, schwingerFetcher);
+            const searchState = await extractSchwinger(
+                initialSearchState,
+                fakeSchwingerFetcher,
+                fakeTransformer,
+            );
 
             expect(searchState).toEqual({
                 expanding: 'lastName',
@@ -459,7 +477,11 @@ describe('When extracting data', () => {
                 totalOfEvaluatedSearchTokens: 0
             }
 
-            const searchState = await extractSchwinger(initialSearchState, schwingerFetcher);
+            const searchState = await extractSchwinger(
+                initialSearchState,
+                fakeSchwingerFetcher,
+                fakeTransformer,
+            );
 
             expect(searchState).toEqual({
                 expanding: 'lastName',
@@ -483,7 +505,11 @@ describe('When extracting data', () => {
                 totalOfEvaluatedSearchTokens: 0
             }
 
-            const searchState = await extractSchwinger(initialSearchState, schwingerFetcher);
+            const searchState = await extractSchwinger(
+                initialSearchState,
+                fakeSchwingerFetcher,
+                fakeTransformer,
+            );
 
             expect(searchState).toEqual({
                 expanding: 'lastName',

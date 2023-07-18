@@ -1,4 +1,4 @@
-export const schwingerFetcher = async (url) => {
+export const fetchSchwinger = async (url) => {
     return fetch(url)
         .then(response => {
             if (response.status === 429) {
@@ -171,86 +171,88 @@ function createSearchToken(searchState) {
     }
 }
 
-export async function extractSchwinger(initialSearchState, schwingerFetcher) {
+export async function extractSchwinger(initialSearchState, fetchSchwinger, transformSchwinger, loadSchwinger) {
     let searchState = initialSearchState;
     while (
         searchState.lastNameToken < searchState.lastNameStopToken ||
         searchState.firstNameToken < searchState.firstNameStopToken
         ) {
         const searchToken = createSearchToken(searchState);
-        const response = await schwingerFetcher(
+        const response = await fetchSchwinger(
             `https://zwilch.ch/api/v2/schwinger/${searchToken}`
         );
         // wait because of rate limit
         if (response == null) {
             console.log('rate limit reached, waiting 2 seconds');
             await wait(3000);
-        }
-        /**
-         * We have the max number of suggestions.
-         * This means we have to distinguish between the following cases:
-         * 1. all suggestions start with the same last name -> expand first name
-         * 2.not all suggestions start with the same last name -> expand last name
-         * */
-        else if (numberOfSuggestions(response['suggestions']) === searchState.maximumNumberOfSuggestions) {
-            const suggestions = response['suggestions'];
-            searchState = determineWhatToExpand(suggestions, searchState)
-            if (searchState.expanding === 'firstName') {
-                searchState = appendAlphabeticallyToFirstName(suggestions, searchState)
-            } else if (searchState.expanding === 'lastName') {
-                // we have the max number of suggestions but we need to check the following:
-                // 1. all suggestions start with the search token for the last name -> append alphabetically to last name
-                // 2. not all suggestions start with the search token for the last name but the last suggestion does -> append alphabetically to last name
-                // 3. not all suggestions start with the search token for the last name and the last suggestion does not -> increment last name token
-                if (numberOfSuggestionsStartingWithLastNameToken(suggestions, searchState) === searchState.maximumNumberOfSuggestions) {
-                    searchState = appendAlphabeticallyToLastName(suggestions, searchState)
-                } else if (lastSuggestionStartsWithLastNameToken(suggestions, searchState)) {
-                    searchState = appendAlphabeticallyToLastName(suggestions, searchState)
+        } else {
+            const transformedSchwinger = transformSchwinger(response);
+            console.log(transformedSchwinger);
+            /**
+             * We have the max number of suggestions.
+             * This means we have to distinguish between the following cases:
+             * 1. all suggestions start with the same last name -> expand first name
+             * 2.not all suggestions start with the same last name -> expand last name
+             * */
+            if (numberOfSuggestions(response['suggestions']) === searchState.maximumNumberOfSuggestions) {
+                const suggestions = response['suggestions'];
+                searchState = determineWhatToExpand(suggestions, searchState)
+                if (searchState.expanding === 'firstName') {
+                    searchState = appendAlphabeticallyToFirstName(suggestions, searchState)
+                } else if (searchState.expanding === 'lastName') {
+                    // we have the max number of suggestions but we need to check the following:
+                    // 1. all suggestions start with the search token for the last name -> append alphabetically to last name
+                    // 2. not all suggestions start with the search token for the last name but the last suggestion does -> append alphabetically to last name
+                    // 3. not all suggestions start with the search token for the last name and the last suggestion does not -> increment last name token
+                    if (numberOfSuggestionsStartingWithLastNameToken(suggestions, searchState) === searchState.maximumNumberOfSuggestions) {
+                        searchState = appendAlphabeticallyToLastName(suggestions, searchState)
+                    } else if (lastSuggestionStartsWithLastNameToken(suggestions, searchState)) {
+                        searchState = appendAlphabeticallyToLastName(suggestions, searchState)
+                    } else {
+                        searchState = incrementSearchToken(searchState, 'lastName');
+                    }
                 } else {
-                    searchState = incrementSearchToken(searchState, 'lastName');
+                    throw new Error('unexpected expanding state: ' + searchState.expanding)
                 }
-            } else {
-                throw new Error('unexpected expanding state: ' + searchState.expanding)
-            }
-            searchState = updateSearchState(searchState, (searchState) => {
-                searchState.totalOfEvaluatedSearchTokens = searchState.totalOfEvaluatedSearchTokens + 1;
-            });
+                searchState = updateSearchState(searchState, (searchState) => {
+                    searchState.totalOfEvaluatedSearchTokens = searchState.totalOfEvaluatedSearchTokens + 1;
+                });
 
-        }
-        /**
-         * We have less than the max number of suggestions.
-         * This means we have to distinguish between the following cases:
-         * 1. we were expanding the first name
-         *      a. we did not reach the end of the alphabet -> expand last first name
-         *      b. we reached the end of the alphabet -> determine next search token based on last name
-         * 2. we were expanding the last name
-         *      a. we did not reach the end of the alphabet -> expand last name
-         *      b. we reached the end of the alphabet -> determine next search token based on last name
-         * */
-        else {
-            if (searchState.expanding === 'firstName') {
-                if (reachedEndOfAlphabet(searchState, 'firstName')) {
-                    searchState = resetFirstNameToken(searchState);
-                    searchState = incrementSearchToken(searchState, 'lastName');
-                } else {
-                    searchState = incrementSearchToken(searchState, 'firstName');
-                }
-            } else if (searchState.expanding === 'lastName') {
-                if (reachedEndOfAlphabet(searchState, 'lastName')) {
-                    searchState = removeLastLetterFromLastNameToken(searchState);
-                    searchState = incrementSearchToken(searchState, 'lastName');
-                } else {
-                    searchState = incrementSearchToken(searchState, 'lastName');
-                }
-            } else {
-                throw new Error('unexpected expanding state: ' + searchState.expanding)
             }
-            searchState = updateSearchState(searchState, (searchState) => {
-                searchState.totalOfEvaluatedSearchTokens = searchState.totalOfEvaluatedSearchTokens + 1;
-            });
+            /**
+             * We have less than the max number of suggestions.
+             * This means we have to distinguish between the following cases:
+             * 1. we were expanding the first name
+             *      a. we did not reach the end of the alphabet -> expand last first name
+             *      b. we reached the end of the alphabet -> determine next search token based on last name
+             * 2. we were expanding the last name
+             *      a. we did not reach the end of the alphabet -> expand last name
+             *      b. we reached the end of the alphabet -> determine next search token based on last name
+             * */
+            else {
+                if (searchState.expanding === 'firstName') {
+                    if (reachedEndOfAlphabet(searchState, 'firstName')) {
+                        searchState = resetFirstNameToken(searchState);
+                        searchState = incrementSearchToken(searchState, 'lastName');
+                    } else {
+                        searchState = incrementSearchToken(searchState, 'firstName');
+                    }
+                } else if (searchState.expanding === 'lastName') {
+                    if (reachedEndOfAlphabet(searchState, 'lastName')) {
+                        searchState = removeLastLetterFromLastNameToken(searchState);
+                        searchState = incrementSearchToken(searchState, 'lastName');
+                    } else {
+                        searchState = incrementSearchToken(searchState, 'lastName');
+                    }
+                } else {
+                    throw new Error('unexpected expanding state: ' + searchState.expanding)
+                }
+                searchState = updateSearchState(searchState, (searchState) => {
+                    searchState.totalOfEvaluatedSearchTokens = searchState.totalOfEvaluatedSearchTokens + 1;
+                });
+            }
+            console.log('New search state is:\n', JSON.stringify(searchState));
+            return searchState;
         }
-        console.log('New search state is:\n', JSON.stringify(searchState));
     }
-
-    return searchState;
 }
