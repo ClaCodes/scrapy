@@ -174,7 +174,7 @@ function createSearchToken(searchState) {
 export async function extractSchwinger(initialSearchState, fetchSchwinger, transformSchwinger, loadSchwinger) {
     let searchState = initialSearchState;
     const loadConfig = {
-        path: `./dist/${new Date().toISOString()}_schwinger.json`,
+        path: `./dist/data/${new Date().toISOString()}_schwinger.json`,
     }
     while (searchState.lastNameToken < searchState.lastNameStopToken) {
         const searchToken = createSearchToken(searchState);

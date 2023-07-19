@@ -6,7 +6,7 @@ describe('When loading data', () => {
 
         it('should throw an error if the input is not an array', () => {
             const loadConfig = {
-                path: `./dist/${new Date().toISOString()}_schwinger.json`,
+                path: `./dist/data/${new Date().toISOString()}_schwinger.json`,
             }
 
             const transformed = 'not an array';
@@ -17,7 +17,7 @@ describe('When loading data', () => {
 
         it('should be able to load transformed schwinger', () => {
             const loadConfig = {
-                path: `./dist/${new Date().toISOString()}_schwinger.json`,
+                path: `./dist/data/${new Date().toISOString()}_schwinger.json`,
             }
             const transformed = [
                 {id: 1, firstName: 'Fabio', lastName: 'Abächerli'},

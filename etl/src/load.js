@@ -12,11 +12,17 @@ export function loadSchwingerToFile(transformedSchwinger, config) {
         }
     }
 
-    const pathToStoreSchwinger = path.join(process.cwd(), config.path);
+    const pathToStoreSchwingerFile = path.join(process.cwd(), config.path);
+    const schwingerFileDir = path.dirname(pathToStoreSchwingerFile)
+
+    if (!fs.existsSync(schwingerFileDir)){
+        fs.mkdirSync(schwingerFileDir);
+    }
+
     let newData = [];
     let combinedData = [];
-    if (fs.existsSync(pathToStoreSchwinger)) {
-        const existingData = JSON.parse(fs.readFileSync(pathToStoreSchwinger, 'utf8'));
+    if (fs.existsSync(pathToStoreSchwingerFile)) {
+        const existingData = JSON.parse(fs.readFileSync(pathToStoreSchwingerFile, 'utf8'));
         const existingIds = new Set(existingData.map(obj => obj.id));
         newData = transformedSchwinger.filter(obj => !existingIds.has(obj.id));
         combinedData = [...existingData, ...newData];
@@ -30,7 +36,7 @@ export function loadSchwingerToFile(transformedSchwinger, config) {
     } else {
         newData = transformedSchwinger;
         fs.writeFileSync(
-            config.path,
+            pathToStoreSchwingerFile,
             JSON.stringify(newData, null, 2),
             (err) => {
                 if (err) throw err;
@@ -40,7 +46,7 @@ export function loadSchwingerToFile(transformedSchwinger, config) {
 
     return {
         success: true,
-        location: pathToStoreSchwinger,
+        location: pathToStoreSchwingerFile,
         numberOfRecordsAdded: newData.length,
         totalNumberOfRecords: combinedData.length
     }
