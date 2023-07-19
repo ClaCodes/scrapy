@@ -1,0 +1,24 @@
+{
+  "plugins": [
+    "plugins/markdown"
+  ],
+  "recurseDepth": 10,
+  "source": {
+    "include": [
+      "./"
+    ],
+    "excludePattern": "(^|\\/|\\\\)_",
+    "includePattern": ".+\\.js(doc|x)?$"
+  },
+  "sourceType": "module",
+  "tags": {
+    "allowUnknownTags": true
+  },
+  "templates": {
+    "cleverLinks": false,
+    "default": {
+      "outputSourceFiles": true
+    },
+    "monospaceLinks": false
+  }
+}

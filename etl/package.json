@@ -7,18 +7,23 @@
     "babel-jest": "^29.4.1",
     "babel-preset-jest": "^29.4.0",
     "jest": "^29.6.1",
-    "jest-esm-transformer": "^1.0.0"
+    "jest-esm-transformer": "^1.0.0",
+    "jsdoc": "^4.0.2"
   },
   "keywords": [],
   "license": "Apache 2.0",
   "main": "extract.js",
   "name": "etl",
   "scripts": {
+    "doc": "jsdoc --verbose -c ./jsdoc.json",
     "extract": "node etl-runner.js",
     "test": "NODE_OPTIONS=--experimental-vm-modules pnpm jest",
-    "test:watch": "npm run test -- --watch"
+    "test:watch": "pnpm run test -- --watch"
   },
   "target": "esnext",
   "type": "module",
-  "version": "0.0.1"
+  "version": "0.0.1",
+  "dependencies": {
+    "firebase": "^10.0.0"
+  }
 }
