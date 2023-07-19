@@ -23,26 +23,18 @@ export function createSearch(value) {
  * @returns {string} the incremented token
  */
 export function incrementToken(token) {
-    let index = token.length - 1;
-    while (index > 0) {
-        const currentToken = token[index];
-        if (currentToken > 'z') {
-            if (token.length > 1) {
-                const lookAhead = token[index - 1];
-                // look is after z
-                if (lookAhead > 'z') {
-                    String.fromCharCode(lastLetterOfToken.charCodeAt(0) + 1)
-                } else {
+    const lastLetter = token[token.length - 1];
+    const secondLastLetter = token[token.length - 2];
 
-                }
-            }
-        }
-        let nextLetter = String.fromCharCode(lastLetterOfToken.charCodeAt(0) + 1);
-        // z -> a, az -> b
-        if (nextLetter > 'z') {
-            nextLetter = 'a';
-        }
-        index--;
+    if (lastLetter !== 'z') {
+        return token.slice(0, -1) + String.fromCharCode(lastLetter.charCodeAt(0) + 1);
+    } else if (lastLetter === 'z' && token.length === 1) {
+        // replace last z by aa
+        return token.slice(0, -1) + 'aa';
+    } else if (lastLetter === 'z' && secondLastLetter !== 'z') {
+       return token.slice(0, -2) + String.fromCharCode(secondLastLetter.charCodeAt(0) + 1);
+    } else if (lastLetter === 'z' && secondLastLetter === 'z') {
+        return token.slice(0, -1) + 'aa';
     }
 
     return token;
