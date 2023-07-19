@@ -28,8 +28,10 @@ describe('When loading data', () => {
             const result = loadSchwingerToFile(transformed, loadConfig);
 
             expect(result).toEqual({
+                location: expect.any(String),
                 success: true,
-                numberOfRecords: 3,
+                numberOfRecordsAdded: 3,
+                totalNumberOfRecords: 0,
             })
         });
     });

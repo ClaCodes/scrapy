@@ -13,11 +13,13 @@ export function loadSchwingerToFile(transformedSchwinger, config) {
     }
 
     const pathToStoreSchwinger = path.join(process.cwd(), config.path);
+    let newData = [];
+    let combinedData = [];
     if (fs.existsSync(pathToStoreSchwinger)) {
         const existingData = JSON.parse(fs.readFileSync(pathToStoreSchwinger, 'utf8'));
         const existingIds = new Set(existingData.map(obj => obj.id));
-        const newData = transformedSchwinger.filter(obj => !existingIds.has(obj.id));
-        const combinedData = [...existingData, ...newData];
+        newData = transformedSchwinger.filter(obj => !existingIds.has(obj.id));
+        combinedData = [...existingData, ...newData];
         fs.writeFileSync(
             config.path,
             JSON.stringify(combinedData, null, 2),
@@ -26,9 +28,10 @@ export function loadSchwingerToFile(transformedSchwinger, config) {
             },
         );
     } else {
+        newData = transformedSchwinger;
         fs.writeFileSync(
             config.path,
-            JSON.stringify(transformedSchwinger, null, 2),
+            JSON.stringify(newData, null, 2),
             (err) => {
                 if (err) throw err;
             },
@@ -37,6 +40,8 @@ export function loadSchwingerToFile(transformedSchwinger, config) {
 
     return {
         success: true,
-        numberOfRecords: transformedSchwinger.length
+        location: pathToStoreSchwinger,
+        numberOfRecordsAdded: newData.length,
+        totalNumberOfRecords: combinedData.length
     }
 }
