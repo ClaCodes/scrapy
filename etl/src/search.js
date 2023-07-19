@@ -1,6 +1,6 @@
 export function createSearch(value) {
     return {
-        origin: null,
+        origin: 'root',
         value,
         jump: null,
     }

@@ -6,7 +6,7 @@ describe('The search', () => {
         const initialSearch = createSearch('initial value');
 
         expect(initialSearch).toMatchObject({
-            origin: null,
+            origin: 'root',
             value: 'initial value',
             jump: null,
         });

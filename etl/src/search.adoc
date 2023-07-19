@@ -1,9 +1,9 @@
 == Search strategy
 
-* Search is performed by strictly increasing the search token * alphabetically.
+* Search is performed by strictly increasing the search token alphabetically until we reach the stop token.
 * To optimize search, we use the suggestions of the search result.
 * If we can leverage the suggestions we call this a "jump".
-* We can leverage the suggestions if the search token is a prefix of at least one of the suggestions.
+** We can leverage the suggestions if the search token is a prefix of at least one of the suggestions.
 * A jump is registered with the previous search token.
 * Jumps are searched to exhaustion, i.e. until the jump string ends in `z`.
 * After we exhaust the jump, we jump back to the previous search token.
@@ -13,9 +13,10 @@ To avoid clashes with previous jumps we skip any jumps ahead.
 
 [source,javascript]
 ....
-const Token = {
-    origin: Token | null,
+const search = {
+    origin: 'root' | Token,
+    stop: Token | null,
     value: 'a',
-    jump: null | Token,
+    jump: Token | null,
 }
 ....
