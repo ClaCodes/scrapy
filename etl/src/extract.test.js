@@ -25,7 +25,7 @@ describe('When extracting data', () => {
         });
 
 
-        fit('should be possible to search from "a " to "abd "', async () => {
+        it('should be possible to search from "a " to "abd "', async () => {
             const search = await extractSchwinger(
                 createSearch('a', 'abd'),
                 fakeSchwingerFetcher,
@@ -45,7 +45,7 @@ describe('When extracting data', () => {
             });
         })
 
-        fit('should be possible to search from "a " to "abderhalden mauricf"', async () => {
+        it('should be possible to search from "a " to "abderhalden mauricf"', async () => {
             const search = await extractSchwinger(
                 createSearch('a', 'abderhalden mauricf'),
                 fakeSchwingerFetcher,
