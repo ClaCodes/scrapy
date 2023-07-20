@@ -18,5 +18,11 @@ Zwilch scraping
 ## Target data structure
 
 
+## Open tasks:
 
-## Extraction process
+* [ ] Script for diffing the stored data with the current data (from the API)
+* [ ] Pipeline for automatic updates based on the diff executed by a cronjob as Github Action
+* [ ] Simple UI for querying the data
+* [ ] Extract and update scripts for Schwingfest (either reuse existing extract script in python or migrate to JS)
+* [ ] Script to calculate and store elo scores for each Schwinger
+* [ ] UI which allows to plot the elo scores over time and compare them to other Schwinger
