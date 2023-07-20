@@ -106,13 +106,13 @@ export function applySuggestions(search, suggestions) {
         return search;
     }
 
-    const possibleJumps = suggestions
-        .filter(suggestion => suggestion !== searchValueInternal(search))
-        .filter(suggestion => suggestion.startsWith(searchValueInternal(search)))
-    if (possibleJumps.length === 0 && search.jumps.length === 0) {
+    const matchingSuggestions = suggestions
+        .filter(suggestion => suggestion.value.toLowerCase() !== searchValueInternal(search))
+        .filter(suggestion => suggestion.value.toLowerCase().startsWith(searchValueInternal(search)))
+    if (matchingSuggestions.length === 0 && search.jumps.length === 0) {
         return search;
     }
-    if (possibleJumps.length === 0 && search.jumps.length > 0) {
+    if (matchingSuggestions.length === 0 && search.jumps.length > 0) {
         return {
             ...search,
             jumps: [
@@ -125,14 +125,14 @@ export function applySuggestions(search, suggestions) {
             ],
         }
     }
-    if (possibleJumps.length > 0) {
-        const jump = possibleJumps[possibleJumps.length - 1];
+    if (matchingSuggestions.length > 0) {
+        const lastMatchingSuggestion = matchingSuggestions[matchingSuggestions.length - 1];
         return {
             ...search,
             jumps: [
                 ...search.jumps,
                 {
-                    value: jump,
+                    value: lastMatchingSuggestion.value.toLowerCase(),
                     state: JumpState.jumped,
                 }
             ],
@@ -297,10 +297,10 @@ export function currentSearchValue(search) {
         return search.value;
     } else {
         const lastJump = search.jumps[search.jumps.length - 1];
-        if (lastJump.state === JumpState.exhausting) {
+        if (lastJump.state === JumpState.exhausting || lastJump.state === JumpState.exhausted) {
             return lastJump.value;
         } else {
-            throw new Error('Implementation defect: Cannot retrieve next search value if the last jump is not exhausting');
+            throw new Error('Implementation defect: Cannot retrieve next search value if the last jump is not exhausting or exhausted');
         }
     }
 }

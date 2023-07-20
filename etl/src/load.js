@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 
 export function loadSchwingerToFile(transformedSchwinger, config) {
+
     if (!Array.isArray(transformedSchwinger)) {
         throw new Error('input must be an array');
     }
@@ -19,7 +20,7 @@ export function loadSchwingerToFile(transformedSchwinger, config) {
         fs.mkdirSync(schwingerFileDir);
     }
 
-    let newData = [];
+    let newData;
     let combinedData = [];
     if (fs.existsSync(pathToStoreSchwingerFile)) {
         const existingData = JSON.parse(fs.readFileSync(pathToStoreSchwingerFile, 'utf8'));

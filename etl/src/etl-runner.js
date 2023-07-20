@@ -1,16 +1,14 @@
 import {extractSchwinger, fetchSchwinger} from './extract.js';
 import {transformSchwinger} from "./transform.js";
 import {loadSchwingerToFile} from "./load.js";
+import {createSearch} from "./search.js";
 
-await extractSchwinger({
-        expanding: 'lastName',
-        firstNameToken: '',
-        lastNameStopToken: 'zy',
-        lastNameToken: 'a',
-        maximumNumberOfSuggestions: 15,
-        totalOfEvaluatedSearchTokens: 0
-    },
+await extractSchwinger(
+    createSearch('a', 'zz'),
     fetchSchwinger,
     transformSchwinger,
-    loadSchwingerToFile
+    loadSchwingerToFile,
+    {
+        path: `./dist/data/${new Date().toISOString()}_schwinger.json`,
+    }
 );

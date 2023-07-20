@@ -1,10 +1,10 @@
 import {transformSchwinger} from "./transform.js";
-import {response_for_a_} from "./test-data.js";
+import {response_for_a} from "./test-data.js";
 
 describe('When transforming data', () => {
 
     it('should transform a schwinger response into the target object', () => {
-        const transformed = transformSchwinger(response_for_a_);
+        const transformed = transformSchwinger(response_for_a);
 
         transformed.forEach(transformedSchwinger => {
             expect(transformedSchwinger).toMatchObject(

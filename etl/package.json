@@ -16,7 +16,7 @@
   "name": "etl",
   "scripts": {
     "doc": "jsdoc --verbose -c ./jsdoc.json",
-    "extract": "node etl-runner.js",
+    "extract": "node ./src/etl-runner.js",
     "test": "NODE_OPTIONS=--experimental-vm-modules pnpm jest",
     "test:watch": "pnpm run test -- --watch"
   },

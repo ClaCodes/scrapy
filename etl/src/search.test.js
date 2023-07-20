@@ -90,6 +90,10 @@ describe('The search', () => {
                 '|',
             ];
 
+            tokens.forEach(
+                (token) => expect(incrementToken(token)).toEqual('aa')
+            );
+
             expect(incrementToken('z')).toEqual('aa');
         });
 
@@ -176,8 +180,8 @@ describe('The search', () => {
             const updatedSearch = applySuggestions(
                 initialSearch,
                 [
-                    'does not match',
-                    'does not match either',
+                    {value: 'does not match'},
+                    {value: 'does not match either'},
                 ]
             );
 
@@ -192,8 +196,8 @@ describe('The search', () => {
             const jumpedSearch = applySuggestions(
                 initialSearch,
                 [
-                    'search token',
-                    'search token 1',
+                    {value: 'search token'},
+                    {value: 'search token 1'},
                 ]
             );
 
@@ -220,8 +224,8 @@ describe('The search', () => {
             const updatedSearch = applySuggestions(
                 initialSearch,
                 [
-                    'does not match',
-                    'does not match either',
+                    {value: 'does not match'},
+                    {value: 'does not match either'},
                 ]
             );
 
@@ -248,8 +252,8 @@ describe('The search', () => {
             const updatedSearch = applySuggestions(
                 initialSearch,
                 [
-                    'does not match',
-                    'does not match either',
+                    {value: 'does not match'},
+                    {value: 'does not match either'},
                 ]
             );
 
@@ -274,8 +278,8 @@ describe('The search', () => {
             const updatedSearch = applySuggestions(
                 initialSearch,
                 [
-                    'search token',
-                    'search token 1',
+                    {value: 'search token'},
+                    {value: 'search token 1'},
                 ]
             );
 
@@ -296,10 +300,10 @@ describe('The search', () => {
             const updatedSearch = applySuggestions(
                 initialSearch,
                 [
-                    'search token',
-                    'search token 1',
-                    'search token 2',
-                    't - prefix missmatch'
+                    {value: 'search token'},
+                    {value: 'search token 1'},
+                    {value: 'search token 2'},
+                    {value: 't- prefix missmatch'}
                 ]
             );
 
@@ -540,13 +544,13 @@ describe('The search', () => {
             expect(() => currentSearchValue(invalidJumpedSearch)).toThrow();
         });
 
-        it('should throw if the jump is in state "exhausted"', () => {
+        it('should throw if the jump is in state "jumped"', () => {
             const invalidJumpedSearch = {
                 ...createSearch('a'),
                 jumps: [
                     {
                         value: 'b',
-                        state: 'exhausted',
+                        state: 'jumped',
                     }
                 ],
             };
@@ -600,16 +604,16 @@ describe('The search', () => {
         describe('and the search space has to be searched incrementally', () => {
             const filteredSearchSpace = (allValues, token) => {
                 return allValues
-                    .filter(suggestion => suggestion.startsWith(token))
+                    .filter(suggestion => suggestion.value.startsWith(token))
                     .slice(0, 3)
             }
 
             it('should produce the expected sequence of search states', () => {
                 let search = createSearch('a', 'c');
                 const allValues = [
-                    'a',
-                    'b',
-                    'c',
+                    {value: 'a'},
+                    {value: 'b'},
+                    {value: 'c'},
                 ];
                 const expectedSearchStates = [
                     {
@@ -643,16 +647,16 @@ describe('The search', () => {
         describe('and the search space has to be searched incrementally', () => {
             const filteredSearchSpace = (allValues, token) => {
                 return allValues
-                    .filter(suggestion => suggestion.startsWith(token))
+                    .filter(suggestion => suggestion.value.startsWith(token))
                     .slice(0, 3)
             }
 
             it('should produce the expected sequence of search states', () => {
                 let search = createSearch('a', 'aac');
                 const allValues = [
-                    'a',
-                    'aa',
-                    'aaa',
+                    {value: 'a'},
+                    {value: 'aa'},
+                    {value: 'aaa'},
                 ];
                 const expectedSearchStates = [
                     {
@@ -713,16 +717,16 @@ describe('The search', () => {
         describe('and the search space requires an increment after a jump', () => {
             const filteredSearchSpace = (allValues, token) => {
                 return allValues
-                    .filter(suggestion => suggestion.startsWith(token))
+                    .filter(suggestion => suggestion.value.startsWith(token))
                     .slice(0, 3)
             }
 
             it('should produce the expected sequence of search states', () => {
                 let search = createSearch('jump', 'jumq');
                 const allValues = [
-                    'jump',
-                    'jumpy',
-                    'jumq',
+                    {value: 'jump'},
+                    {value: 'jumpy'},
+                    {value: 'jumq'},
                 ];
                 const expectedSearchStates = [
                     {
@@ -779,20 +783,20 @@ describe('The search', () => {
         describe('and the search space requires multiple jumps', () => {
             const filteredSearchSpace = (allValues, token) => {
                 return allValues
-                    .filter(suggestion => suggestion.startsWith(token))
+                    .filter(suggestion => suggestion.value.startsWith(token))
                     .slice(0, 3)
             }
 
             it('should produce the expected sequence of search states', () => {
                 let search = createSearch('jump', 'jump c');
                 const allValues = [
-                    'jump a',
-                    'jump a',
-                    'jump a',
-                    'jump b',
-                    'jump b',
-                    'jump b',
-                    'jump c',
+                    {value: 'jump a'},
+                    {value: 'jump a'},
+                    {value: 'jump a'},
+                    {value: 'jump b'},
+                    {value: 'jump b'},
+                    {value: 'jump b'},
+                    {value: 'jump c'},
                 ];
                 const expectedSearchStates = [
                     {
@@ -853,7 +857,7 @@ describe('The search', () => {
         describe('and the search space requires exhausting a jump', () => {
             const filteredSearchSpace = (allValues, token) => {
                 return allValues
-                    .filter(suggestion => suggestion.startsWith(token))
+                    .filter(suggestion => suggestion.value.startsWith(token))
                     .slice(0, 3)
             }
             const fillJumpSequenceToExhaustion = (search) => {
@@ -890,10 +894,10 @@ describe('The search', () => {
             it('should produce the expected sequence of search states', () => {
                 let search = createSearch('a', 'achermano');
                 const allValues = [
-                    'achermann',
-                    'achermann a',
-                    'achermann z',
-                    'achermano',
+                    {value: 'achermann'},
+                    {value: 'achermann a'},
+                    {value: 'achermann z'},
+                    {value: 'achermano'},
                 ];
                 const expectedSearchStates = [
                     {
