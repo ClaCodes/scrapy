@@ -3,7 +3,7 @@ import {extractSchwinger} from "./extract.js";
 import {
     response_for_a, response_for_abderhalden_maurice,
 } from "./test-data.js";
-import {createSearch} from "./search.js";
+import {createSearch, OptimizationStrategy} from "./search.js";
 
 describe('When extracting data', () => {
 
@@ -27,7 +27,7 @@ describe('When extracting data', () => {
 
         it('should be possible to search from "a " to "abd "', async () => {
             const search = await extractSchwinger(
-                createSearch('a', 'abd'),
+                createSearch('a', 'abd', OptimizationStrategy.accuracy),
                 fakeSchwingerFetcher,
                 fakeTransformer,
                 fakeLoader,
@@ -36,6 +36,7 @@ describe('When extracting data', () => {
             expect(search).toEqual({
                 value: 'a',
                 stopToken: 'abd',
+                optimizationStrategy: 'accuracy',
                 jumps: [
                     {
                         value: 'abderhalden maurice',
@@ -47,7 +48,7 @@ describe('When extracting data', () => {
 
         it('should be possible to search from "a " to "abderhalden mauricf"', async () => {
             const search = await extractSchwinger(
-                createSearch('a', 'abderhalden mauricf'),
+                createSearch('a', 'abderhalden mauricf', OptimizationStrategy.accuracy),
                 fakeSchwingerFetcher,
                 fakeTransformer,
                 fakeLoader,
@@ -56,6 +57,7 @@ describe('When extracting data', () => {
             expect(search).toEqual({
                 value: 'a',
                 stopToken: 'abderhalden mauricf',
+                optimizationStrategy: 'accuracy',
                 jumps: [
                     {
                         value: 'abderhalden mauricf',

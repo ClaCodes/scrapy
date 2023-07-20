@@ -4,13 +4,13 @@ import {
     applySuggestions,
     calculateNextSearch,
     currentSearchValue,
-    isSearchExhausted, searchValueInternal, isBetween
+    isSearchExhausted, searchValueInternal, isBetween, OptimizationStrategy
 } from "./search.js";
 
 describe('The search', () => {
 
     it('should be possible to create a search with an initial value', () => {
-        const initialSearch = createSearch('initial value', 'stop value');
+        const initialSearch = createSearch('initial value', 'stop value', OptimizationStrategy.accuracy);
 
         expect(initialSearch).toMatchObject({
             jumps: [],
@@ -74,7 +74,7 @@ describe('The search', () => {
             ];
 
             tokens.forEach((token, index) => {
-                expect(incrementToken(token)).toEqual(expected[index]);
+                expect(incrementToken(token, OptimizationStrategy.accuracy)).toEqual(expected[index]);
             })
         })
 
@@ -91,10 +91,10 @@ describe('The search', () => {
             ];
 
             tokens.forEach(
-                (token) => expect(incrementToken(token)).toEqual('aa')
+                (token) => expect(incrementToken(token, OptimizationStrategy.accuracy)).toEqual('aa')
             );
 
-            expect(incrementToken('z')).toEqual('aa');
+            expect(incrementToken('z', OptimizationStrategy.accuracy)).toEqual('aa');
         });
 
         it('should increment the second last letter by one and remove the last letter if the last letter is not between "a" and "z" and the second last letter is between "a" and "z"', () => {
@@ -123,7 +123,7 @@ describe('The search', () => {
             ];
 
             tokens.forEach((token, index) => {
-                expect(incrementToken(token)).toEqual(expected[index]);
+                expect(incrementToken(token, OptimizationStrategy.accuracy)).toEqual(expected[index]);
             })
         });
 
@@ -145,7 +145,7 @@ describe('The search', () => {
             ];
 
             tokens.forEach((token, index) => {
-                expect(incrementToken(token)).toEqual(expected[index]);
+                expect(incrementToken(token, OptimizationStrategy.accuracy)).toEqual(expected[index]);
             });
         });
 
@@ -167,7 +167,7 @@ describe('The search', () => {
             ];
 
             tokens.forEach((token, index) => {
-                expect(incrementToken(token)).toEqual(expected[index]);
+                expect(incrementToken(token, OptimizationStrategy.accuracy)).toEqual(expected[index]);
             });
         });
     })
@@ -175,7 +175,7 @@ describe('The search', () => {
     describe('when applying the resulting suggestions', () => {
 
         it('should do nothing if there are no suggestions and there are no jumps', () => {
-            const initialSearch = createSearch('search token');
+            const initialSearch = createSearch('search token', 'stop token', OptimizationStrategy.accuracy);
 
             const updatedSearch = applySuggestions(
                 initialSearch,
@@ -192,7 +192,7 @@ describe('The search', () => {
         });
 
         it('should exhaust the jump if one exists and no suggestions matched it', () => {
-            const initialSearch = createSearch('search token');
+            const initialSearch = createSearch('search token', 'stop token', OptimizationStrategy.accuracy);
             const jumpedSearch = applySuggestions(
                 initialSearch,
                 [
@@ -219,7 +219,7 @@ describe('The search', () => {
         });
 
         it('should do nothing if there are suggestions but none of them is a prefix search value and there are no jumps', () => {
-            const initialSearch = createSearch('search token');
+            const initialSearch = createSearch('search token', 'stop token', OptimizationStrategy.accuracy);
 
             const updatedSearch = applySuggestions(
                 initialSearch,
@@ -236,7 +236,7 @@ describe('The search', () => {
 
         it('should set the state of the last jump to "exhausting" if there are suggestions but none of them is a prefix search value and there are jumps', () => {
             const initialSearch = {
-                ...createSearch('a search token'),
+                ...createSearch('a search token', 'stop token', OptimizationStrategy.accuracy),
                 jumps: [
                     {
                         value: 'b search token',
@@ -273,7 +273,7 @@ describe('The search', () => {
         });
 
         it('should jump if the search token is a prefix of at least one of the suggestions ', () => {
-            const initialSearch = createSearch('search token');
+            const initialSearch = createSearch('search token', 'stop token', OptimizationStrategy.accuracy);
 
             const updatedSearch = applySuggestions(
                 initialSearch,
@@ -295,7 +295,7 @@ describe('The search', () => {
         });
 
         it('should jump to the last suggestion that has the search token as a prefix', () => {
-            const initialSearch = createSearch('search token');
+            const initialSearch = createSearch('search token', 'stop token', OptimizationStrategy.accuracy);
 
             const updatedSearch = applySuggestions(
                 initialSearch,
@@ -323,7 +323,7 @@ describe('The search', () => {
 
         it('should increment the search value if no jump exists', () => {
             const search = {
-                ...createSearch('a'),
+                ...createSearch('a', 'stop token', OptimizationStrategy.accuracy),
                 jumps: [],
             };
 
@@ -336,7 +336,7 @@ describe('The search', () => {
 
         it('should start exhausting the jump if there is only one jump in state "jumped"', () => {
             const search = {
-                ...createSearch('a'),
+                ...createSearch('a', 'stop token', OptimizationStrategy.accuracy),
                 jumps: [
                     {
                         value: 'a',
@@ -360,7 +360,7 @@ describe('The search', () => {
 
         it('should start exhausting the last jump if there are multiple jumps in state "jumped"', () => {
             const search = {
-                ...createSearch('a'),
+                ...createSearch('a', 'stop token', OptimizationStrategy.accuracy),
                 jumps: [
                     {
                         value: 'aa',
@@ -392,7 +392,7 @@ describe('The search', () => {
 
         it('should increment the jump value and stay in state "exhausting" if the jump is in state "exhausting" and the incremented value does not end in "z"', () => {
             const search = {
-                ...createSearch('a'),
+                ...createSearch('a', 'z', OptimizationStrategy.accuracy),
                 jumps: [
                     {
                         value: 'aa',
@@ -425,7 +425,7 @@ describe('The search', () => {
 
     it('should increment the jump value and transition to state "exhausted" if the jump is in state "exhausting" and the incremented value does end in "z"', () => {
         const search = {
-            ...createSearch('a'),
+            ...createSearch('a', 'z', OptimizationStrategy.accuracy),
             jumps: [
                 {
                     value: 'aa',
@@ -457,7 +457,7 @@ describe('The search', () => {
 
     it('should apply the jump value to the search and remove the jump if there is only one jump and it is in state "exhausted"', () => {
         const search = {
-            ...createSearch('a'),
+            ...createSearch('a', 'z', OptimizationStrategy.accuracy),
             jumps: [
                 {
                     value: 'az',
@@ -477,7 +477,7 @@ describe('The search', () => {
 
     it('should apply the jump value to the previous jump, set the state of the previous jump to "exhausting" and remove the exhausted jump if there are multiple jumps and the last jump is in state "exhausted"', () => {
         const search = {
-            ...createSearch('a'),
+            ...createSearch('a', 'z', OptimizationStrategy.accuracy),
             jumps: [
                 {
                     value: 'aa',
@@ -507,7 +507,7 @@ describe('The search', () => {
     describe('when retrieving the next search value', () => {
 
         it('should return the search value if no jump exists', () => {
-            const initialSearch = createSearch('a');
+            const initialSearch = createSearch('a', 'z', OptimizationStrategy.accuracy);
 
             const value = currentSearchValue(initialSearch);
 
@@ -516,7 +516,7 @@ describe('The search', () => {
 
         it('should return the jump value if one jump exists', () => {
             const jumpedSearch = {
-                ...createSearch('a'),
+                ...createSearch('a', 'b', OptimizationStrategy.accuracy),
                 jumps: [
                     {
                         value: 'b',
@@ -532,7 +532,7 @@ describe('The search', () => {
 
         it('should throw if the jump is in state "jumped"', () => {
             const invalidJumpedSearch = {
-                ...createSearch('a'),
+                ...createSearch('a', 'z', OptimizationStrategy.accuracy),
                 jumps: [
                     {
                         value: 'b',
@@ -571,7 +571,7 @@ describe('The search', () => {
                         .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
                         .slice(0, 3)
                 }
-                let search = createSearch('a', 'c');
+                let search = createSearch('a', 'c', OptimizationStrategy.accuracy);
                 const expectedSearchStates = [
                     {
                         value: 'a',
@@ -609,7 +609,7 @@ describe('The search', () => {
             }
 
             it('should produce the expected sequence of search states', () => {
-                let search = createSearch('a', 'c');
+                let search = createSearch('a', 'c', OptimizationStrategy.accuracy);
                 const allValues = [
                     {value: 'a'},
                     {value: 'b'},
@@ -652,7 +652,7 @@ describe('The search', () => {
             }
 
             it('should produce the expected sequence of search states', () => {
-                let search = createSearch('a', 'aac');
+                let search = createSearch('a', 'aac', OptimizationStrategy.accuracy);
                 const allValues = [
                     {value: 'a'},
                     {value: 'aa'},
@@ -722,7 +722,7 @@ describe('The search', () => {
             }
 
             it('should produce the expected sequence of search states', () => {
-                let search = createSearch('jump', 'jumq');
+                let search = createSearch('jump', 'jumq', OptimizationStrategy.accuracy);
                 const allValues = [
                     {value: 'jump'},
                     {value: 'jumpy'},
@@ -788,7 +788,7 @@ describe('The search', () => {
             }
 
             it('should produce the expected sequence of search states', () => {
-                let search = createSearch('jump', 'jump c');
+                let search = createSearch('jump', 'jump c', OptimizationStrategy.accuracy);
                 const allValues = [
                     {value: 'jump a'},
                     {value: 'jump a'},
@@ -874,7 +874,7 @@ describe('The search', () => {
                             }
                         ],
                     });
-                    nextValue = incrementToken(nextValue);
+                    nextValue = incrementToken(nextValue, OptimizationStrategy.accuracy);
                 }
                 return filledJumpSequence;
             }
@@ -886,13 +886,13 @@ describe('The search', () => {
                         ...search,
                         value: nextValue,
                     });
-                    nextValue = incrementToken(nextValue);
+                    nextValue = incrementToken(nextValue, OptimizationStrategy.accuracy);
                 }
                 return filledSearchValue;
             }
 
             it('should produce the expected sequence of search states', () => {
-                let search = createSearch('a', 'achermano');
+                let search = createSearch('a', 'achermano', OptimizationStrategy.accuracy);
                 const allValues = [
                     {value: 'achermann'},
                     {value: 'achermann a'},
