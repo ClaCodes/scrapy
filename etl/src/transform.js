@@ -12,7 +12,7 @@
  * @property {Suggestion[]} suggestions
  *
  * @typedef {Object} Schwinger
- * @property {string} id
+ * @property {number} id
  * @property {string} firstName
  * @property {string} lastName
  *
