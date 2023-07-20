@@ -12,8 +12,20 @@ describe('The search', () => {
     it('should be possible to create a search with an initial value', () => {
         const initialSearch = createSearch('initial value', 'stop value', OptimizationStrategy.accuracy);
 
-        expect(initialSearch).toMatchObject({
+        expect(initialSearch).toEqual({
             jumps: [],
+            optimizationStrategy: 'accuracy',
+            stopToken: 'stop value',
+            value: 'initial value',
+        });
+    });
+
+    it('should be possible to create a search with an initial value and optimization strategy', () => {
+        const initialSearch = createSearch('initial value', 'stop value', OptimizationStrategy.speed);
+
+        expect(initialSearch).toEqual({
+            jumps: [],
+            optimizationStrategy: 'speed',
             stopToken: 'stop value',
             value: 'initial value',
         });
