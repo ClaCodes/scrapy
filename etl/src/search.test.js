@@ -1,12 +1,11 @@
 import {
-    createSearch,
-    incrementToken,
     applySuggestions,
     calculateNextSearch,
+    createSearch,
     currentSearchValue,
-    isSearchExhausted,
-    searchValueInternal,
+    incrementToken,
     isBetween,
+    isSearchExhausted,
     OptimizationStrategy
 } from "./search.js";
 
@@ -152,164 +151,197 @@ describe('The search', () => {
                 });
             });
         });
+
+
+        describe('and the optimization strategy is speed', () => {
+
+            it('should throw an error if there is only one letters and it is after "z"', () => {
+                const tokensThatShouldThrow = [
+                    'z',
+                    '{',
+                    // ... and all other letters after "z"
+                ];
+
+                tokensThatShouldThrow.forEach((token) => {
+                    expect(() => incrementToken(token, OptimizationStrategy.speed))
+                        .toThrow('Implementation defect: wrap around is not allowed for single letter tokens');
+                });
+            });
+
+            it('should increment the last letter if there are <3 letters and the letter is before "z"', () => {
+                const incrementSpecs = [
+                    ['1', 'a'], // before a
+                    ['a', 'b'],
+                    ['b', 'c'],
+                    ['x', 'y'],
+                    ['y', 'z'],
+                    ['aa', 'ab'],
+                    ['bb', 'bc'],
+                    ['cd', 'ce'],
+                    ['xx', 'xy'],
+                    ['yy', 'yz'],
+                ];
+
+                incrementSpecs.forEach(([token, expectedIncrement]) => {
+                    expect(incrementToken(token, OptimizationStrategy.speed)).toEqual(expectedIncrement);
+                });
+            });
+
+            it('should increment the second last letter and remove the rest if there are >=4 letters', () => {
+                const incrementSpecs = [
+                    ['aa1a', 'aaa'],
+                    ['abaa', 'abb'],
+                    ['acab', 'acb'],
+                    ['adbz', 'adc'],
+                    ['aec{', 'aed'],
+                ];
+
+                incrementSpecs.forEach(([token, expectedIncrement]) => {
+                    expect(incrementToken(token, OptimizationStrategy.speed)).toEqual(expectedIncrement);
+                });
+            });
+        });
+
     })
 
-    describe('and the optimization strategy is speed', () => {
-
-        it('should throw an error if there is only one letters and it is after "z"', () => {
-            const tokensThatShouldThrow = [
-                'z',
-                '{',
-                // ... and all other letters after "z"
-            ];
-
-            tokensThatShouldThrow.forEach((token) => {
-                expect(() => incrementToken(token, OptimizationStrategy.speed))
-                    .toThrow('Implementation defect: wrap around is not allowed for single letter tokens');
-            });
-        });
-
-        it('should increment the last letter if there are <3 letters and the letter is before "z"', () => {
-            const incrementSpecs = [
-                ['1', 'a'], // before a
-                ['a', 'b'],
-                ['b', 'c'],
-                ['x', 'y'],
-                ['y', 'z'],
-                ['aa', 'ab'],
-                ['bb', 'bc'],
-                ['cd', 'ce'],
-                ['xx', 'xy'],
-                ['yy', 'yz'],
-            ];
-
-            incrementSpecs.forEach(([token, expectedIncrement]) => {
-                expect(incrementToken(token, OptimizationStrategy.speed)).toEqual(expectedIncrement);
-            });
-        });
-
-        it('should increment the second last letter and remove the rest if there are >=3 letters', () => {
-            const incrementSpecs = [
-                ['a1a', 'aa'],
-                ['baa', 'bb'],
-                ['cab', 'cb'],
-                ['dbz', 'dc'],
-                ['ec{', 'ed'],
-            ];
-
-            incrementSpecs.forEach(([token, expectedIncrement]) => {
-                expect(incrementToken(token, OptimizationStrategy.speed)).toEqual(expectedIncrement);
-            });
-        });
-    });
 
     describe('when applying the resulting suggestions', () => {
 
-        describe('and the optimization strategy is accuracy', () => {
+        describe('independent of the optimization strategy', () => {
 
             it('should do nothing if there are no suggestions and there are no jumps', () => {
-                const initialSearch = createSearch('search token', 'stop token', OptimizationStrategy.accuracy);
+                const strategies = [
+                    OptimizationStrategy.accuracy,
+                    OptimizationStrategy.speed,
+                ];
 
-                const updatedSearch = applySuggestions(
-                    initialSearch,
-                    [
-                        {value: 'does not match'},
-                        {value: 'does not match either'},
-                    ]
-                );
+                strategies.forEach((strategy) => {
+                    const updatedSearch = applySuggestions(
+                        createSearch('search token', 'stop token', strategy),
+                        [
+                            {value: 'does not match'},
+                            {value: 'does not match either'},
+                        ]
+                    );
 
-                expect(updatedSearch).toMatchObject({
-                    value: 'search token',
-                    jumps: [],
+                    expect(updatedSearch).toMatchObject({
+                        value: 'search token',
+                        jumps: [],
+                    });
                 });
             });
 
             it('should exhaust the jump if one exists and no suggestions matched it', () => {
-                const initialSearch = createSearch('search token', 'stop token', OptimizationStrategy.accuracy);
-                const jumpedSearch = applySuggestions(
-                    initialSearch,
-                    [
-                        {value: 'search token'},
-                        {value: 'search token 1'},
-                    ]
-                );
+                const strategies = [
+                    OptimizationStrategy.accuracy,
+                    OptimizationStrategy.speed,
+                ];
 
-                const updatedSearch = applySuggestions(
-                    jumpedSearch,
-                    []
-                );
+                strategies.forEach((strategy) => {
+                    const jumpedSearch = {
+                        ...createSearch('search token', 'stop token', strategy),
+                        jumps: [
+                            {
+                                value: 'search token 1',
+                                state: 'jumped',
+                            }
+                        ],
+                    };
 
+                    const updatedSearch = applySuggestions(
+                        jumpedSearch,
+                        []
+                    );
 
-                expect(updatedSearch).toMatchObject({
-                    value: 'search token',
-                    jumps: [
-                        {
-                            value: 'search token 1',
-                            state: 'exhausting',
-                        }
-                    ],
+                    expect(updatedSearch).toMatchObject({
+                        value: 'search token',
+                        jumps: [
+                            {
+                                value: 'search token 1',
+                                state: 'exhausting',
+                            }
+                        ],
+                    });
                 });
             });
 
             it('should do nothing if there are suggestions but none of them is a prefix search value and there are no jumps', () => {
-                const initialSearch = createSearch('search token', 'stop token', OptimizationStrategy.accuracy);
+                const strategies = [
+                    OptimizationStrategy.accuracy,
+                    OptimizationStrategy.speed,
+                ];
 
-                const updatedSearch = applySuggestions(
-                    initialSearch,
-                    [
-                        {value: 'does not match'},
-                        {value: 'does not match either'},
-                    ]
-                );
+                strategies.forEach((strategy) => {
+                    const initialSearch = createSearch('search token', 'stop token', strategy);
 
-                expect(updatedSearch).toMatchObject({
-                    ...initialSearch,
+                    const updatedSearch = applySuggestions(
+                        initialSearch,
+                        [
+                            {value: 'does not match'},
+                            {value: 'does not match either'},
+                        ]
+                    );
+
+                    expect(updatedSearch).toMatchObject({
+                        ...initialSearch,
+                    });
                 });
             });
 
             it('should set the state of the last jump to "exhausting" if there are suggestions but none of them is a prefix search value and there are jumps', () => {
-                const initialSearch = {
-                    ...createSearch('a search token', 'stop token', OptimizationStrategy.accuracy),
-                    jumps: [
-                        {
-                            value: 'b search token',
-                            state: 'jumped',
-                        },
-                        {
-                            value: 'c search token',
-                            state: 'jumped',
-                        },
-                    ]
-                };
+                const strategies = [
+                    OptimizationStrategy.accuracy,
+                    OptimizationStrategy.speed,
+                ];
 
-                const updatedSearch = applySuggestions(
-                    initialSearch,
-                    [
-                        {value: 'does not match'},
-                        {value: 'does not match either'},
-                    ]
-                );
+                strategies.forEach((strategy) => {
+                    const initialSearch = {
+                        ...createSearch('a search token', 'stop token', strategy),
+                        jumps: [
+                            {
+                                value: 'b search token',
+                                state: 'jumped',
+                            },
+                            {
+                                value: 'c search token',
+                                state: 'jumped',
+                            },
+                        ]
+                    };
 
-                expect(updatedSearch).toMatchObject({
-                    ...initialSearch,
-                    jumps: [
-                        {
-                            value: 'b search token',
-                            state: 'jumped',
-                        },
-                        {
-                            value: 'c search token',
-                            state: 'exhausting',
-                        },
-                    ]
+                    const updatedSearch = applySuggestions(
+                        initialSearch,
+                        [
+                            {value: 'does not match'},
+                            {value: 'does not match either'},
+                        ]
+                    );
+
+                    expect(updatedSearch).toMatchObject({
+                        ...initialSearch,
+                        jumps: [
+                            {
+                                value: 'b search token',
+                                state: 'jumped',
+                            },
+                            {
+                                value: 'c search token',
+                                state: 'exhausting',
+                            },
+                        ]
+                    });
                 });
             });
 
-            it('should jump if the search token is a prefix of at least one of the suggestions ', () => {
-                const initialSearch = createSearch('search token', 'stop token', OptimizationStrategy.accuracy);
 
+        });
+
+
+        describe('and the optimization strategy is accuracy', () => {
+
+            it('should jump if the search token is a prefix of at least one of the suggestions ', () => {
                 const updatedSearch = applySuggestions(
-                    initialSearch,
+                    createSearch('search token', 'stop token', OptimizationStrategy.accuracy),
                     [
                         {value: 'search token'},
                         {value: 'search token 1'},
@@ -328,10 +360,8 @@ describe('The search', () => {
             });
 
             it('should jump to the last suggestion that has the search token as a prefix', () => {
-                const initialSearch = createSearch('search token', 'stop token', OptimizationStrategy.accuracy);
-
                 const updatedSearch = applySuggestions(
-                    initialSearch,
+                    createSearch('search token', 'stop token', OptimizationStrategy.accuracy),
                     [
                         {value: 'search token'},
                         {value: 'search token 1'},
@@ -351,192 +381,242 @@ describe('The search', () => {
                 });
             });
         });
+
+        describe('and the optimization strategy is speed', () => {
+
+            it('should jump and use up to 3 letters of the target suggestion if the search token is a prefix of exactly one of the suggestions', () => {
+                const suggestionApplicationSpec = [
+                    [{value: 'ab'}, {value: 'ab', state: 'jumped'}],
+                    [{value: 'abc'}, {value: 'abc', state: 'jumped'}],
+                    [{value: 'abcd'}, {value: 'abc', state: 'jumped'}],
+                    [{value: 'abcde'}, {value: 'abc', state: 'jumped'}],
+                ];
+
+                suggestionApplicationSpec.forEach(([suggestion, expectedJump]) => {
+                    const updatedSearch = applySuggestions(
+                        createSearch('a', 'z', OptimizationStrategy.speed),
+                        [
+                            suggestion,
+                        ]
+                    );
+
+                    expect(updatedSearch).toMatchObject({
+                        value: 'a',
+                        jumps: [
+                            expectedJump,
+                        ],
+                    });
+                });
+            });
+
+            it('should jump and increment the first three letters of the last suggestion if the search token is a prefix of more than one suggestion', () => {
+                const suggestionApplicationSpec = [
+                    [
+                        [{value: 'ab'}, {value: 'abc'}], {value: 'abd', state: 'jumped'},
+                        [{value: 'ax'}, {value: 'ay'}], {value: 'az', state: 'jumped'},
+                        [{value: 'ay'}, {value: 'az'}], {value: 'b', state: 'jumped'},
+                    ]
+                ];
+
+                suggestionApplicationSpec.forEach(([suggestions, expectedJump]) => {
+                    const updatedSearch = applySuggestions(
+                        createSearch('a', 'z', OptimizationStrategy.speed),
+                        suggestions,
+                    );
+
+                    expect(updatedSearch).toMatchObject({
+                        value: 'a',
+                        jumps: [
+                            expectedJump,
+                        ],
+                    });
+                });
+            });
+        });
     });
+
 
     describe('when calculating the next search', () => {
 
-        describe('and the optimization strategy is accuracy', () => {
+        it('should increment the search value if no jump exists', () => {
+            const search = {
+                ...createSearch('a', 'stop token', OptimizationStrategy.accuracy),
+                jumps: [],
+            };
 
-            it('should increment the search value if no jump exists', () => {
-                const search = {
-                    ...createSearch('a', 'stop token', OptimizationStrategy.accuracy),
-                    jumps: [],
-                };
+            const nextSearchValue = calculateNextSearch(search);
 
-                const nextSearchValue = calculateNextSearch(search);
-
-                expect(nextSearchValue).toMatchObject({
-                    value: 'b',
-                });
+            expect(nextSearchValue).toMatchObject({
+                value: 'b',
             });
+        });
 
-            it('should start exhausting the jump if there is only one jump in state "jumped"', () => {
-                const search = {
-                    ...createSearch('a', 'stop token', OptimizationStrategy.accuracy),
-                    jumps: [
-                        {
-                            value: 'a',
-                            state: 'jumped',
-                        }
-                    ],
-                };
+        it('should start exhausting the jump if there is only one jump in state "jumped"', () => {
+            const search = {
+                ...createSearch('a', 'stop token', OptimizationStrategy.accuracy),
+                jumps: [
+                    {
+                        value: 'a',
+                        state: 'jumped',
+                    }
+                ],
+            };
 
-                const nextSearchValue = calculateNextSearch(search);
+            const nextSearchValue = calculateNextSearch(search);
 
-                expect(nextSearchValue).toMatchObject({
-                    ...nextSearchValue,
-                    jumps: [
-                        {
-                            value: 'a',
-                            state: 'exhausting',
-                        }
-                    ],
-                });
+            expect(nextSearchValue).toMatchObject({
+                ...nextSearchValue,
+                jumps: [
+                    {
+                        value: 'a',
+                        state: 'exhausting',
+                    }
+                ],
             });
+        });
 
-            it('should start exhausting the last jump if there are multiple jumps in state "jumped"', () => {
-                const search = {
-                    ...createSearch('a', 'stop token', OptimizationStrategy.accuracy),
-                    jumps: [
-                        {
-                            value: 'aa',
-                            state: 'jumped',
-                        },
-                        {
-                            value: 'aaa',
-                            state: 'jumped',
-                        }
-                    ],
-                };
+        it('should start exhausting the last jump if there are multiple jumps in state "jumped"', () => {
+            const search = {
+                ...createSearch('a', 'stop token', OptimizationStrategy.accuracy),
+                jumps: [
+                    {
+                        value: 'aa',
+                        state: 'jumped',
+                    },
+                    {
+                        value: 'aaa',
+                        state: 'jumped',
+                    }
+                ],
+            };
 
-                const nextSearchValue = calculateNextSearch(search);
+            const nextSearchValue = calculateNextSearch(search);
 
-                expect(nextSearchValue).toMatchObject({
-                    ...nextSearchValue,
-                    jumps: [
-                        {
-                            value: 'aa',
-                            state: 'jumped',
-                        },
-                        {
-                            value: 'aaa',
-                            state: 'exhausting',
-                        }
-                    ],
-                });
+            expect(nextSearchValue).toMatchObject({
+                ...nextSearchValue,
+                jumps: [
+                    {
+                        value: 'aa',
+                        state: 'jumped',
+                    },
+                    {
+                        value: 'aaa',
+                        state: 'exhausting',
+                    }
+                ],
             });
+        });
 
-            it('should increment the jump value and stay in state "exhausting" if the jump is in state "exhausting" and the incremented value does not end in "z"', () => {
-                const search = {
-                    ...createSearch('a', 'z', OptimizationStrategy.accuracy),
-                    jumps: [
-                        {
-                            value: 'aa',
-                            state: 'jumped',
-                        },
-                        {
-                            value: 'aaa',
-                            state: 'exhausting',
-                        }
-                    ],
-                };
+        it('should increment the jump value and stay in state "exhausting" if the jump is in state "exhausting" and the incremented value does not end in "z"', () => {
+            const search = {
+                ...createSearch('a', 'z', OptimizationStrategy.accuracy),
+                jumps: [
+                    {
+                        value: 'aa',
+                        state: 'jumped',
+                    },
+                    {
+                        value: 'aaa',
+                        state: 'exhausting',
+                    }
+                ],
+            };
 
-                const nextSearchValue = calculateNextSearch(search);
+            const nextSearchValue = calculateNextSearch(search);
 
-                expect(nextSearchValue).toMatchObject({
-                    ...nextSearchValue,
-                    jumps: [
-                        {
-                            value: 'aa',
-                            state: 'jumped',
-                        },
-                        {
-                            value: 'aab',
-                            state: 'exhausting',
-                        }
-                    ],
-                });
+            expect(nextSearchValue).toMatchObject({
+                ...nextSearchValue,
+                jumps: [
+                    {
+                        value: 'aa',
+                        state: 'jumped',
+                    },
+                    {
+                        value: 'aab',
+                        state: 'exhausting',
+                    }
+                ],
             });
+        });
 
-            it('should increment the jump value and transition to state "exhausted" if the jump is in state "exhausting" and the incremented value does end in "z"', () => {
-                const search = {
-                    ...createSearch('a', 'z', OptimizationStrategy.accuracy),
-                    jumps: [
-                        {
-                            value: 'aa',
-                            state: 'jumped',
-                        },
-                        {
-                            value: 'aay',
-                            state: 'exhausting',
-                        }
-                    ],
-                };
+        it('should increment the jump value and transition to state "exhausted" if the jump is in state "exhausting" and the incremented value does end in "z"', () => {
+            const search = {
+                ...createSearch('a', 'z', OptimizationStrategy.accuracy),
+                jumps: [
+                    {
+                        value: 'aa',
+                        state: 'jumped',
+                    },
+                    {
+                        value: 'aay',
+                        state: 'exhausting',
+                    }
+                ],
+            };
 
-                const nextSearchValue = calculateNextSearch(search);
+            const nextSearchValue = calculateNextSearch(search);
 
-                expect(nextSearchValue).toMatchObject({
-                    ...nextSearchValue,
-                    jumps: [
-                        {
-                            value: 'aa',
-                            state: 'jumped',
-                        },
-                        {
-                            value: 'aaz',
-                            state: 'exhausted',
-                        }
-                    ],
-                });
+            expect(nextSearchValue).toMatchObject({
+                ...nextSearchValue,
+                jumps: [
+                    {
+                        value: 'aa',
+                        state: 'jumped',
+                    },
+                    {
+                        value: 'aaz',
+                        state: 'exhausted',
+                    }
+                ],
             });
+        });
 
-            it('should apply the jump value to the search and remove the jump if there is only one jump and it is in state "exhausted"', () => {
-                const search = {
-                    ...createSearch('a', 'z', OptimizationStrategy.accuracy),
-                    jumps: [
-                        {
-                            value: 'az',
-                            state: 'exhausted',
-                        },
-                    ],
-                };
+        it('should apply the jump value to the search and remove the jump if there is only one jump and it is in state "exhausted"', () => {
+            const search = {
+                ...createSearch('a', 'z', OptimizationStrategy.accuracy),
+                jumps: [
+                    {
+                        value: 'az',
+                        state: 'exhausted',
+                    },
+                ],
+            };
 
-                const nextSearchValue = calculateNextSearch(search);
+            const nextSearchValue = calculateNextSearch(search);
 
-                expect(nextSearchValue).toMatchObject({
-                    ...nextSearchValue,
-                    value: 'b',
-                    jumps: [],
-                });
+            expect(nextSearchValue).toMatchObject({
+                ...nextSearchValue,
+                value: 'b',
+                jumps: [],
             });
+        });
 
-            it('should apply the jump value to the previous jump, set the state of the previous jump to "exhausting" and remove the exhausted jump if there are multiple jumps and the last jump is in state "exhausted"', () => {
-                const search = {
-                    ...createSearch('a', 'z', OptimizationStrategy.accuracy),
-                    jumps: [
-                        {
-                            value: 'aa',
-                            state: 'jumped',
-                        },
-                        {
-                            value: 'aaaz',
-                            state: 'exhausted',
-                        },
-                    ],
-                };
+        it('should apply the jump value to the previous jump, set the state of the previous jump to "exhausting" and remove the exhausted jump if there are multiple jumps and the last jump is in state "exhausted"', () => {
+            const search = {
+                ...createSearch('a', 'z', OptimizationStrategy.accuracy),
+                jumps: [
+                    {
+                        value: 'aa',
+                        state: 'jumped',
+                    },
+                    {
+                        value: 'aaaz',
+                        state: 'exhausted',
+                    },
+                ],
+            };
 
-                const nextSearchValue = calculateNextSearch(search);
+            const nextSearchValue = calculateNextSearch(search);
 
-                expect(nextSearchValue).toMatchObject({
-                    ...nextSearchValue,
-                    value: 'a',
-                    jumps: [
-                        {
-                            value: 'aab',
-                            state: 'exhausting',
-                        },
-                    ],
-                });
+            expect(nextSearchValue).toMatchObject({
+                ...nextSearchValue,
+                value: 'a',
+                jumps: [
+                    {
+                        value: 'aab',
+                        state: 'exhausting',
+                    },
+                ],
             });
         });
     });
@@ -566,37 +646,61 @@ describe('The search', () => {
 
             expect(value).toBe('b');
         });
-
-        it('should throw if the jump is in state "jumped"', () => {
-            const invalidJumpedSearch = {
-                ...createSearch('a', 'z', OptimizationStrategy.accuracy),
-                jumps: [
-                    {
-                        value: 'b',
-                        state: 'jumped',
-                    }
-                ],
-            };
-
-            expect(() => currentSearchValue(invalidJumpedSearch)).toThrow();
-        });
-
-        it('should throw if the jump is in state "jumped"', () => {
-            const invalidJumpedSearch = {
-                ...createSearch('a'),
-                jumps: [
-                    {
-                        value: 'b',
-                        state: 'jumped',
-                    }
-                ],
-            };
-
-            expect(() => currentSearchValue(invalidJumpedSearch)).toThrow();
-        });
     });
 
     describe('when being applied to a predefined search space', () => {
+        const assertSearchSequence = (search, searchSpace, expectedSearchStates, pageSize = 3) => {
+            let searchToTest = {...search};
+            for (let stateIndex = 0; stateIndex < expectedSearchStates.length; stateIndex++) {
+                const expectedInitialState = expectedSearchStates[stateIndex];
+                expect(searchToTest).toMatchObject(expectedInitialState);
+                const searchValue = currentSearchValue(searchToTest);
+                searchToTest = applySuggestions(searchToTest, filteredSearchSpace(searchSpace, searchValue, pageSize));
+                searchToTest = calculateNextSearch(searchToTest);
+                const expectedNextState = expectedSearchStates[stateIndex + 1];
+                if (expectedNextState) {
+                    expect(searchToTest).toMatchObject(expectedNextState);
+                }
+            }
+            expect(isSearchExhausted(searchToTest)).toBe(true);
+        }
+
+        const fillJumpSequenceToExhaustion = (search) => {
+            const fillStart = search.jumps[search.jumps.length - 1]
+            let nextValue = fillStart.value;
+            const filledJumpSequence = [];
+            while (nextValue[nextValue.length - 1] < 'z') {
+                filledJumpSequence.push({
+                    ...search,
+                    jumps: [
+                        {
+                            value: nextValue,
+                            state: 'exhausting',
+                        }
+                    ],
+                });
+                nextValue = incrementToken(nextValue, OptimizationStrategy.accuracy);
+            }
+            return filledJumpSequence;
+        }
+        const fillSearchValueTo = (search, end = 'z') => {
+            const filledSearchValue = [];
+            let nextValue = search.value;
+            while (nextValue[nextValue.length - 1] < end) {
+                filledSearchValue.push({
+                    ...search,
+                    value: nextValue,
+                });
+                nextValue = incrementToken(nextValue, OptimizationStrategy.accuracy);
+            }
+            return filledSearchValue;
+        }
+        const filteredSearchSpace = (allValues, token, pageSize = 3) => {
+            return allValues
+                .filter(suggestion => suggestion.value.toLowerCase().startsWith(token))
+                .sort((a, b) => a.value.toLowerCase().localeCompare(b.value.toLowerCase()))
+                .slice(0, pageSize);
+        }
 
         describe('and the search strategy is "accuracy"', () => {
 
@@ -604,13 +708,6 @@ describe('The search', () => {
 
                 it('should produce the expected sequence of search states', () => {
                     const searchSpace = [];
-                    const filteredSearchSpace = (allValues, token) => {
-                        return allValues
-                            .filter(suggestion => suggestion.startsWith(token))
-                            .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
-                            .slice(0, 3)
-                    }
-                    let search = createSearch('a', 'c', OptimizationStrategy.accuracy);
                     const expectedSearchStates = [
                         {
                             value: 'a',
@@ -626,29 +723,15 @@ describe('The search', () => {
                         },
                     ];
 
-                    for (let initialState = 0; initialState < expectedSearchStates.length; initialState++) {
-                        const expectedInitialState = expectedSearchStates[initialState];
-                        expect(search).toMatchObject(expectedInitialState);
-                        search = applySuggestions(search, filteredSearchSpace(searchSpace, search.value));
-                        search = calculateNextSearch(search);
-                        const expectedNextState = expectedSearchStates[initialState + 1];
-                        if (expectedNextState) {
-                            expect(search).toMatchObject(expectedNextState);
-                        }
-                    }
-                    expect(isSearchExhausted(search)).toBe(true);
+                    const search = createSearch('a', 'c', OptimizationStrategy.accuracy);
+
+                    assertSearchSequence(search, searchSpace, expectedSearchStates);
                 });
             });
 
             describe('and the search space has to be searched incrementally', () => {
-                const filteredSearchSpace = (allValues, token) => {
-                    return allValues
-                        .filter(suggestion => suggestion.value.startsWith(token))
-                        .slice(0, 3)
-                }
 
                 it('should produce the expected sequence of search states', () => {
-                    let search = createSearch('a', 'c', OptimizationStrategy.accuracy);
                     const allValues = [
                         {value: 'a'},
                         {value: 'b'},
@@ -669,29 +752,15 @@ describe('The search', () => {
                         },
                     ];
 
-                    for (let initialState = 0; initialState < expectedSearchStates.length; initialState++) {
-                        const expectedInitialState = expectedSearchStates[initialState];
-                        expect(search).toMatchObject(expectedInitialState);
-                        search = applySuggestions(search, filteredSearchSpace(allValues, search.value));
-                        search = calculateNextSearch(search);
-                        const expectedNextState = expectedSearchStates[initialState + 1];
-                        if (expectedNextState) {
-                            expect(search).toMatchObject(expectedNextState);
-                        }
-                    }
-                    expect(isSearchExhausted(search)).toBe(true);
+                    let search = createSearch('a', 'c', OptimizationStrategy.accuracy);
+
+                    assertSearchSequence(search, allValues, expectedSearchStates);
                 });
             });
 
             describe('and the search space has to be searched incrementally', () => {
-                const filteredSearchSpace = (allValues, token) => {
-                    return allValues
-                        .filter(suggestion => suggestion.value.startsWith(token))
-                        .slice(0, 3)
-                }
 
                 it('should produce the expected sequence of search states', () => {
-                    let search = createSearch('a', 'aac', OptimizationStrategy.accuracy);
                     const allValues = [
                         {value: 'a'},
                         {value: 'aa'},
@@ -735,33 +804,15 @@ describe('The search', () => {
                         },
                     ];
 
-                    for (let initialState = 0; initialState < expectedSearchStates.length; initialState++) {
-                        const expectedInitialState = expectedSearchStates[initialState];
-                        expect(search).toMatchObject(expectedInitialState);
-                        const value = searchValueInternal(search);
-                        search = applySuggestions(
-                            search,
-                            filteredSearchSpace(allValues, value)
-                        );
-                        search = calculateNextSearch(search);
-                        const expectedNextState = expectedSearchStates[initialState + 1];
-                        if (expectedNextState) {
-                            expect(search).toMatchObject(expectedNextState);
-                        }
-                    }
-                    expect(isSearchExhausted(search)).toBe(true);
+                    const search = createSearch('a', 'aac', OptimizationStrategy.accuracy);
+
+                    assertSearchSequence(search, allValues, expectedSearchStates);
                 });
             });
 
             describe('and the search space requires an increment after a jump', () => {
-                const filteredSearchSpace = (allValues, token) => {
-                    return allValues
-                        .filter(suggestion => suggestion.value.startsWith(token))
-                        .slice(0, 3)
-                }
 
                 it('should produce the expected sequence of search states', () => {
-                    let search = createSearch('jump', 'jumq', OptimizationStrategy.accuracy);
                     const allValues = [
                         {value: 'jump'},
                         {value: 'jumpy'},
@@ -800,33 +851,15 @@ describe('The search', () => {
                         },
                     ];
 
-                    for (let initialState = 0; initialState < expectedSearchStates.length; initialState++) {
-                        const expectedInitialState = expectedSearchStates[initialState];
-                        expect(search).toMatchObject(expectedInitialState);
-                        const value = searchValueInternal(search);
-                        search = applySuggestions(
-                            search,
-                            filteredSearchSpace(allValues, value)
-                        );
-                        search = calculateNextSearch(search);
-                        const expectedNextState = expectedSearchStates[initialState + 1];
-                        if (expectedNextState) {
-                            expect(search).toMatchObject(expectedNextState);
-                        }
-                    }
-                    expect(isSearchExhausted(search)).toBe(true);
+                    const search = createSearch('jump', 'jumq', OptimizationStrategy.accuracy);
+
+                    assertSearchSequence(search, allValues, expectedSearchStates);
                 });
             });
 
             describe('and the search space requires multiple jumps', () => {
-                const filteredSearchSpace = (allValues, token) => {
-                    return allValues
-                        .filter(suggestion => suggestion.value.startsWith(token))
-                        .slice(0, 3)
-                }
 
                 it('should produce the expected sequence of search states', () => {
-                    let search = createSearch('jump', 'jump c', OptimizationStrategy.accuracy);
                     const allValues = [
                         {value: 'jump a'},
                         {value: 'jump a'},
@@ -874,63 +907,15 @@ describe('The search', () => {
                         },
                     ];
 
-                    for (let initialState = 0; initialState < expectedSearchStates.length; initialState++) {
-                        const expectedInitialState = expectedSearchStates[initialState];
-                        expect(search).toMatchObject(expectedInitialState);
-                        const value = searchValueInternal(search);
-                        search = applySuggestions(
-                            search,
-                            filteredSearchSpace(allValues, value)
-                        );
-                        search = calculateNextSearch(search);
-                        const expectedNextState = expectedSearchStates[initialState + 1];
-                        if (expectedNextState) {
-                            expect(search).toMatchObject(expectedNextState);
-                        }
-                    }
-                    expect(isSearchExhausted(search)).toBe(true);
+                    const search = createSearch('jump', 'jump c', OptimizationStrategy.accuracy);
+
+                    assertSearchSequence(search, allValues, expectedSearchStates);
                 });
             });
 
             describe('and the search space requires exhausting a jump', () => {
-                const filteredSearchSpace = (allValues, token) => {
-                    return allValues
-                        .filter(suggestion => suggestion.value.startsWith(token))
-                        .slice(0, 3)
-                }
-                const fillJumpSequenceToExhaustion = (search) => {
-                    const fillStart = search.jumps[search.jumps.length - 1]
-                    let nextValue = fillStart.value;
-                    const filledJumpSequence = [];
-                    while (nextValue[nextValue.length - 1] < 'z') {
-                        filledJumpSequence.push({
-                            ...search,
-                            jumps: [
-                                {
-                                    value: nextValue,
-                                    state: 'exhausting',
-                                }
-                            ],
-                        });
-                        nextValue = incrementToken(nextValue, OptimizationStrategy.accuracy);
-                    }
-                    return filledJumpSequence;
-                }
-                const fillSearchValueToExhaustion = (search) => {
-                    const filledSearchValue = [];
-                    let nextValue = search.value;
-                    while (nextValue[nextValue.length - 1] < 'z') {
-                        filledSearchValue.push({
-                            ...search,
-                            value: nextValue,
-                        });
-                        nextValue = incrementToken(nextValue, OptimizationStrategy.accuracy);
-                    }
-                    return filledSearchValue;
-                }
 
                 it('should produce the expected sequence of search states', () => {
-                    let search = createSearch('a', 'achermano', OptimizationStrategy.accuracy);
                     const allValues = [
                         {value: 'achermann'},
                         {value: 'achermann a'},
@@ -973,7 +958,7 @@ describe('The search', () => {
                                 }
                             ]
                         },
-                        ...fillSearchValueToExhaustion({
+                        ...fillSearchValueTo({
 
                             value: 'achermannb',
                             stopToken: 'achermano',
@@ -991,25 +976,292 @@ describe('The search', () => {
                         },
                     ];
 
-                    for (let initialState = 0; initialState < expectedSearchStates.length; initialState++) {
-                        const expectedInitialState = expectedSearchStates[initialState];
-                        expect(search).toMatchObject(expectedInitialState);
-                        const value = searchValueInternal(search);
-                        search = applySuggestions(
-                            search,
-                            filteredSearchSpace(allValues, value)
-                        );
-                        search = calculateNextSearch(search);
-                        const expectedNextState = expectedSearchStates[initialState + 1];
-                        if (expectedNextState) {
-                            console.log(search);
-                            expect(search).toMatchObject(expectedNextState);
-                        }
-                    }
-                    expect(isSearchExhausted(search)).toBe(true);
+                    const search = createSearch('a', 'achermano', OptimizationStrategy.accuracy);
+
+                    assertSearchSequence(search, allValues, expectedSearchStates);
                 });
             });
         });
+
+        describe('and the search strategy is speed', () => {
+
+            describe('and the search space is empty', () => {
+
+                it('should produce the expected sequence of search states', () => {
+                    const searchSpace = [];
+                    const expectedSearchStates = [
+                        {
+                            value: 'a',
+                            jumps: [],
+                        },
+                        {
+                            value: 'b',
+                            jumps: [],
+                        },
+                        {
+                            value: 'c',
+                            jumps: [],
+                        },
+                    ];
+
+                    const search = createSearch('a', 'c', OptimizationStrategy.speed);
+
+                    assertSearchSequence(search, searchSpace, expectedSearchStates);
+                });
+            });
+
+            describe('and the search space has to be searched incrementally', () => {
+
+                it('should produce the expected sequence of search states', () => {
+                    const allValues = [
+                        {value: 'a'},
+                        {value: 'aa'},
+                        {value: 'aaa'},
+                    ];
+                    const expectedSearchStates = [
+                        {
+                            value: 'a',
+                            stopToken: 'ac',
+                            jumps: [],
+                        },
+                        {
+                            value: 'a',
+                            stopToken: 'ac',
+                            jumps: [
+                                {
+                                    value: 'aab',
+                                    state: 'exhausting',
+                                }
+                            ],
+                        },
+                        ...fillJumpSequenceToExhaustion({
+                            value: 'a',
+                            stopToken: 'ac',
+                            jumps: [
+                                {
+                                    value: 'aac',
+                                    state: 'exhausting',
+                                }
+                            ],
+                        }),
+                        {
+                            value: 'a',
+                            stopToken: 'ac',
+                            jumps: [
+                                {
+                                    value: 'aaz',
+                                    state: 'exhausted',
+                                }
+                            ],
+                        },
+                        {
+                            value: 'ab',
+                            stopToken: 'ac',
+                            jumps: [],
+                        },
+                    ];
+
+                    const search = createSearch('a', 'ac', OptimizationStrategy.speed);
+
+                    assertSearchSequence(search, allValues, expectedSearchStates);
+                });
+            });
+
+            describe('and the search space requires an increment after a jump', () => {
+
+                it('should produce the expected sequence of search states', () => {
+                    const allValues = [
+                        {value: 'jump'},
+                        {value: 'jumpx'},
+                        {value: 'jumpy'},
+                        {value: 'jun'},
+                        {value: 'junz'},
+                        {value: 'juqa'},
+                        {value: 'juqb'},
+                        {value: 'jw'},
+                    ];
+                    const expectedSearchStates = [
+                        {
+                            value: 'jump',
+                            stopToken: 'jw',
+                            jumps: [],
+                        },
+                        {
+                            value: 'jump',
+                            stopToken: 'jw',
+                            jumps: [
+                                {
+                                    value: 'jun',
+                                    state: 'exhausting',
+                                }
+                            ],
+                        },
+                        {
+                            value: 'juo',
+                            stopToken: 'jw',
+                            jumps: [],
+                        },
+                        {
+                            value: 'jup',
+                            stopToken: 'jw',
+                            jumps: [],
+                        },
+                        {
+                            value: 'juq',
+                            stopToken: 'jw',
+                            jumps: [],
+                        },
+                        {
+                            value: 'juq',
+                            stopToken: 'jw',
+                            jumps: [
+                                {
+                                    value: 'jur',
+                                    state: 'exhausting',
+                                }
+                            ],
+                        },
+                        ...fillJumpSequenceToExhaustion({
+                            value: 'juq',
+                            stopToken: 'jw',
+                            jumps: [
+                                {
+                                    value: 'jus',
+                                    state: 'exhausting',
+                                }
+                            ],
+                        }),
+                        {
+                            value: 'juq',
+                            stopToken: 'jw',
+                            jumps: [
+                                {
+                                    value: 'juz',
+                                    state: 'exhausted',
+                                }
+                            ],
+                        },
+                        {
+                            value: 'jv',
+                            stopToken: 'jw',
+                            jumps: [],
+                        },
+                        {
+                            value: 'jw',
+                            stopToken: 'jw',
+                            jumps: [],
+                        },
+                    ];
+
+                    const search = createSearch('jump', 'jw', OptimizationStrategy.speed);
+
+                    assertSearchSequence(search, allValues, expectedSearchStates);
+                });
+            });
+            describe('and the search space requires all search operations', () => {
+
+                it('should produce the expected sequence of search states', () => {
+                    const allValues = [
+                        {value: "Ab\u00e4cherli Fabio",},
+                        {value: "Ab\u00e4cherli Lars",},
+                        {value: "Ab\u00e4cherli Marco",},
+                        {value: "Abaya Jasin",},
+                        {value: "Abb\u00fchl Janik",},
+                        {value: "Abb\u00fchl Jonas",},
+                        {value: "Abb\u00fchl Levin",},
+                        {value: "Abb\u00fchl Marc",},
+                        {value: "Abb\u00fchl Mike",},
+                        {value: "Abderhalden Adrian",},
+                        {value: "Abderhalden Beat",},
+                        {value: "Abderhalden Deon",},
+                        {value: "Abderhalden J\u00f6rg",},
+                        {value: "Abderhalden Lukas",},
+                        {value: "Abderhalden Maurice",},
+                        {value: "Abegg Robin",},
+                        {value: "Abegg Silvan",},
+                        {value: "Abegglen Markus",},
+                        {value: "Aberle Linus",},
+                        {value: "Egli Isabel",},
+                        {value: "Feierabend Rolf",},
+                        {value: "Gaber Karim",},
+                        {value: "Gilabert Gervais",},
+                        {value: "Graber Alfred",},
+                        {value: "Graber Andreas",},
+                        {value: "Graber B\u00e4nz",},
+                        {value: "Graber Bruno",},
+                        {value: "Graber Colin",},
+                        {value: "Graber Daniel",},
+                        {value: "Graber Felix",},
+                        {value: "Ablanalp David",},
+                        {value: "Ablondi Mike",},
+                        {value: "B\u00e4bler Dominik",},
+                        {value: "B\u00e4bler Sandro",},
+                        {value: "B\u00e4bler Severin",},
+                        {value: "Bably Maleek",},
+                        {value: "Chabloz R\u00e9my",},
+                        {value: "Chabloz Timoth\u00e9e",},
+                        {value: "Gubbi Pablo",},
+                        {value: "Matthey Pablo",},
+                        {value: "Untern\u00e4hrer Pablo",}
+                    ];
+                    const expectedSearchStates = [
+                        {
+                            value: 'a',
+                            stopToken: 'ac',
+                            jumps: [],
+                        },
+                        {
+                            value: 'a',
+                            stopToken: 'ac',
+                            jumps: [
+                                {
+                                    value: 'abe',
+                                    state: 'exhausting',
+                                }
+                            ],
+                        },
+                        ...fillSearchValueTo(
+                            {
+                                value: 'abf',
+                                stopToken: 'ac',
+                                jumps: [],
+                            },
+                            'm'
+                        ),
+                        ...fillJumpSequenceToExhaustion({
+                                value: 'abl',
+                                stopToken: 'ac',
+                                jumps: [
+                                    {
+                                        value: 'abm',
+                                        state: 'exhausting',
+                                    }
+                                ],
+                            },
+                        ),
+                        {
+                            value: 'abl',
+                            stopToken: 'ac',
+                            jumps: [
+                                {
+                                    value: 'abz',
+                                    state: 'exhausted',
+                                }
+                            ],
+                        },
+                        {
+                            value: 'ac',
+                            stopToken: 'ac',
+                            jumps: [],
+                        },
+                    ];
+
+                    const search = createSearch('a', 'ac', OptimizationStrategy.speed);
+
+                    assertSearchSequence(search, allValues, expectedSearchStates, 15);
+                });
+            });
+        })
     });
 });
 

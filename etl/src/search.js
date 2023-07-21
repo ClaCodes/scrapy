@@ -43,6 +43,12 @@ export const OptimizationStrategy = {
 }
 
 /**
+ * @typedef {Object} Search
+ * @property {Jump[]} jumps - the jumps of the search
+ * @property {string} stopToken - the stop token of the search
+ * @property {string} value - the current search value
+ * @property {OptimizationStrategy} optimizationStrategy - the value to optimize for
+ *
  * Creates a search object.
  *
  * Search is performed by strictly increasing the search token alphabetically until we reach the stop token.
@@ -55,12 +61,6 @@ export const OptimizationStrategy = {
  * From there we increment the search token and repeat the process.
  * To avoid clashes with previous jumps we skip any jumps ahead.
  * It is possible to jump ahead multiple times.
- *
- * @typedef {Object} Search
- * @property {Jump[]} jumps - the jumps of the search
- * @property {string} stopToken - the stop token of the search
- * @property {string} value - the current search value
- * @property {OptimizationStrategy} optimizationStrategy - the value to optimize for
  *
  * @typedef {Object} Jump
  * @property {string} value - the value of the jump
@@ -141,8 +141,8 @@ export function applySuggestions(search, suggestions) {
     }
 
     const matchingSuggestions = suggestions
-        .filter(suggestion => suggestion.value.toLowerCase() !== searchValueInternal(search))
-        .filter(suggestion => suggestion.value.toLowerCase().startsWith(searchValueInternal(search)))
+        .filter(suggestion => suggestion.value.toLowerCase() !== currentSearchValue(search))
+        .filter(suggestion => suggestion.value.toLowerCase().startsWith(currentSearchValue(search)))
     if (matchingSuggestions.length === 0 && search.jumps.length === 0) {
         return search;
     }
@@ -175,9 +175,52 @@ export function applySuggestions(search, suggestions) {
                     ],
                 };
             }
-            break;
+            throw new Error('Implementation defect: should not be reachable')
         case OptimizationStrategy.speed:
-            throw new Error('Not implemented');
+            if (matchingSuggestions.length === 0) {
+                return {
+                    ...search,
+                    jumps: [
+                        ...search.jumps.slice(0, -1),
+                        {
+                            ...search.jumps[search.jumps.length - 1],
+                            state: JumpState.exhausting,
+                        }
+                    ],
+                }
+            }
+            const lastMatchingSuggestion = matchingSuggestions[matchingSuggestions.length - 1];
+            const lastJump = search.jumps[search.jumps.length - 1];
+            if (lastJump && lastMatchingSuggestion.value.toLowerCase().startsWith(lastJump.value)) {
+                return {
+                    ...search,
+                    jumps: [
+                        ...search.jumps.slice(0, -1),
+                        {
+                            ...search.jumps[search.jumps.length - 1],
+                            state: JumpState.exhausted,
+                        }
+                    ],
+                }
+            }
+            let nextJumpValue;
+            if (matchingSuggestions.length === 1) {
+                nextJumpValue = matchingSuggestions[0].value.toLowerCase().slice(0, 3);
+            } else {
+                const lastMatchingSuggestion = matchingSuggestions[matchingSuggestions.length - 1];
+                nextJumpValue = incrementToken(lastMatchingSuggestion.value.toLowerCase().slice(0, 3), search.optimizationStrategy);
+            }
+            return {
+                ...search,
+                jumps: [
+                    ...search.jumps,
+                    {
+                        value: nextJumpValue,
+                        state: JumpState.jumped,
+                    }
+                ],
+            };
+            throw new Error('Implementation defect: should not be reachable')
         default:
             throw new Error(`Unknown optimization strategy: ${search.optimizationStrategy}`);
     }
@@ -211,8 +254,8 @@ export function isBetween(start, value, end) {
  *     * otherwise, replace the last z by aa e.g. zz -> zaa, zzz -> zzaa, ..., xzz -> xzaa
  *
  * If the optimization strategy is `speed`, the incrementation rules are as follows:
- * * if there are 3 or more letters, remove all but the first two letters
- * * if there are less than 3 letters, increment the last letter
+ * * if there are 4 or more letters, remove all but the first two letters
+ * * if there are less than 4 letters, increment the last letter
  * the incrementation rules are as follows:
  * * if the token length is 1 or the last letter is between `a` and `z` increment it by one
  *     * e.g. a -> b, b -> c, ..., x -> y; aa -> ab, ab -> ac, ..., ax -> ay
@@ -252,13 +295,15 @@ export function incrementToken(token, optimizationStrategy) {
             }
 
             let incremented = token;
-            if (incremented.length >= 3) {
-                incremented = incremented.slice(0, 2);
+            if (incremented.length >= 4) {
+                incremented = incremented.slice(0, 3);
             }
             if (incremented[incremented.length - 1] < 'a') {
                 return incremented.slice(0, -1) + 'a';
             } else if (incremented[incremented.length - 1] < 'z') {
                 return incremented.slice(0, -1) + String.fromCharCode(incremented.charCodeAt(incremented.length - 1) + 1);
+            } else if (incremented[incremented.length - 1] === 'z') {
+                return incremented.slice(0, -2) + String.fromCharCode(incremented[incremented.length - 2].charCodeAt(0) + 1);
             } else {
                 throw new Error('Implementation defect: token incrementation failed for token ' + token);
             }
@@ -269,15 +314,13 @@ export function incrementToken(token, optimizationStrategy) {
 
 /**
  * Calculates the next search value.
+ * The calculation does not depend on the optimization strategy.
  *
- * If the optimization strategy is `accuracy`, the state of the search determines how the next search value is calculated as follows:
  * * if the search is not jumping, increment the search value
  * * if the search is jumping and the last jump is exhausting, increment the jump value and transition to exhausted if the incremented jump value ends in `z`
  * * if the search is jumping and the last jump is exhausted, apply the jump value to either the previous jump or the search value and remove the jump
  *     * if there is no previous jump, apply the jump value to the search value
  *     * if there is a previous jump, apply the jump value to the previous jump and set the state of the previous jump to exhausting
- *
- * If the optimization strategy is `speed`, the state of the search determines how the next search value is calculated as follows:
  *
  * @param {Search} search - the search to calculate the next search for
  *
@@ -286,89 +329,76 @@ export function calculateNextSearch(search) {
     let updatedSearch = {
         ...search,
     }
-    switch (search.optimizationStrategy) {
-        case OptimizationStrategy.accuracy:
-            if (search.optimizationStrategy === OptimizationStrategy.accuracy) {
-                if (updatedSearch.jumps.length === 0) {
-                    return {
-                        ...updatedSearch,
-                        value: incrementToken(updatedSearch.value, search.optimizationStrategy),
+    if (updatedSearch.jumps.length === 0) {
+        return {
+            ...updatedSearch,
+            value: incrementToken(updatedSearch.value, search.optimizationStrategy),
+        }
+    } else {
+        const lastJump = updatedSearch.jumps[updatedSearch.jumps.length - 1];
+        if (lastJump.state === JumpState.jumped) {
+            return {
+                ...updatedSearch,
+                jumps: [
+                    ...updatedSearch.jumps.slice(0, -1),
+                    {
+                        ...lastJump,
+                        state: JumpState.exhausting,
                     }
-                } else {
-                    const lastJump = updatedSearch.jumps[updatedSearch.jumps.length - 1];
-                    if (lastJump.state === JumpState.jumped) {
-                        return {
-                            ...updatedSearch,
-                            jumps: [
-                                ...updatedSearch.jumps.slice(0, -1),
-                                {
-                                    ...lastJump,
-                                    state: JumpState.exhausting,
-                                }
-                            ],
-                        }
-                    } else if (lastJump.state === JumpState.exhausting) {
-                        const incrementedJumpValue = incrementToken(lastJump.value, search.optimizationStrategy);
-                        if (incrementedJumpValue.endsWith('z')) {
-                            return {
-                                ...updatedSearch,
-                                jumps: [
-                                    ...updatedSearch.jumps.slice(0, -1),
-                                    {
-                                        ...lastJump,
-                                        value: incrementedJumpValue,
-                                        state: JumpState.exhausted,
-                                    }
-                                ],
-                            }
-                        } else {
-                            return {
-                                ...updatedSearch,
-                                jumps: [
-                                    ...updatedSearch.jumps.slice(0, -1),
-                                    {
-                                        ...lastJump,
-                                        value: incrementedJumpValue,
-                                    }
-                                ],
-                            }
-                        }
-                    } else if (lastJump.state === JumpState.exhausted) {
-                        const previousJump = updatedSearch.jumps[updatedSearch.jumps.length - 2];
-                        if (previousJump) {
-                            return {
-                                ...updatedSearch,
-                                jumps: [
-                                    ...updatedSearch.jumps.slice(0, -2),
-                                    {
-                                        ...previousJump,
-                                        value: incrementToken(lastJump.value, search.optimizationStrategy),
-                                        state: JumpState.exhausting,
-                                    }
-                                ],
-                            }
-                        } else {
-                            return {
-                                ...updatedSearch,
-                                value: incrementToken(lastJump.value, search.optimizationStrategy),
-                                jumps: [
-                                    ...updatedSearch.jumps.slice(0, -1),
-                                ],
-                            }
-                        }
-                    } else {
-                        throw new Error('Implementation defect: Unknown jump state');
-                    }
-                }
-            } else if (search.optimizationStrategy === OptimizationStrategy.speed) {
-                throw new Error('Not implemented');
-            } else {
-                throw new Error(`Implementation defect: Unknown optimization strategy "${search.optimizationStrategy}"`);
+                ],
             }
-        case OptimizationStrategy.speed:
-            throw new Error('Not implemented');
-        default:
-            throw new Error(`Implementation defect: Unknown optimization strategy "${search.optimizationStrategy}"`);
+        } else if (lastJump.state === JumpState.exhausting) {
+            const incrementedJumpValue = incrementToken(lastJump.value, search.optimizationStrategy);
+            if (incrementedJumpValue.endsWith('z')) {
+                return {
+                    ...updatedSearch,
+                    jumps: [
+                        ...updatedSearch.jumps.slice(0, -1),
+                        {
+                            ...lastJump,
+                            value: incrementedJumpValue,
+                            state: JumpState.exhausted,
+                        }
+                    ],
+                }
+            } else {
+                return {
+                    ...updatedSearch,
+                    jumps: [
+                        ...updatedSearch.jumps.slice(0, -1),
+                        {
+                            ...lastJump,
+                            value: incrementedJumpValue,
+                        }
+                    ],
+                }
+            }
+        } else if (lastJump.state === JumpState.exhausted) {
+            const previousJump = updatedSearch.jumps[updatedSearch.jumps.length - 2];
+            if (previousJump) {
+                return {
+                    ...updatedSearch,
+                    jumps: [
+                        ...updatedSearch.jumps.slice(0, -2),
+                        {
+                            ...previousJump,
+                            value: incrementToken(lastJump.value, search.optimizationStrategy),
+                            state: JumpState.exhausting,
+                        }
+                    ],
+                }
+            } else {
+                return {
+                    ...updatedSearch,
+                    value: incrementToken(lastJump.value, search.optimizationStrategy),
+                    jumps: [
+                        ...updatedSearch.jumps.slice(0, -1),
+                    ],
+                }
+            }
+        } else {
+            throw new Error('Implementation defect: Unknown jump state');
+        }
     }
 }
 
@@ -384,31 +414,6 @@ export function calculateNextSearch(search) {
  * @returns {string} the next search value
  */
 export function currentSearchValue(search) {
-    if (search.jumps.length === 0) {
-        return search.value;
-    } else {
-        const lastJump = search.jumps[search.jumps.length - 1];
-        if (lastJump.state === JumpState.exhausting || lastJump.state === JumpState.exhausted) {
-            return lastJump.value;
-        } else {
-            throw new Error('Implementation defect: Cannot retrieve next search value if the last jump is not exhausting or exhausted');
-        }
-    }
-}
-
-/**
- * @internal
- *
- * Same as currentSearchValue but for internal use only.
- *
- * Returns the search value or the jump value regardless of the jump state.
- * Is intended to be uses only to apply the suggestions to the search.
- *
- * @param {Search} search - the search to retrieve the next search value for
- *
- * @returns {string} the next search value
- */
-export function searchValueInternal(search) {
     if (search.jumps.length === 0) {
         return search.value;
     } else {
