@@ -1,7 +1,7 @@
 import {extractSchwinger, fetchSchwinger} from './extract.js';
 import {transformSchwinger} from "./transform.js";
 import {loadSchwingerToDatabase, loadSchwingerToFile} from "./load.js";
-import {createSearch} from "./search.js";
+import {createSearch, OptimizationStrategy} from "./search.js";
 import {database} from "./database.js";
 
 
@@ -11,7 +11,7 @@ const loadConfig = {
 }
 
 await extractSchwinger(
-    createSearch('a', 'zz'),
+    createSearch('aaa', 'zzz', OptimizationStrategy.mixed),
     fetchSchwinger,
     transformSchwinger,
     loadSchwingerToFile,
