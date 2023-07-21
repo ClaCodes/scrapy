@@ -8,16 +8,6 @@ export const config = {
     "/tests/",
   ],
   coverageProvider: "v8",
-  presets: [
-    [
-      '@babel/preset-env',
-      {
-        targets: {
-          node: 'current',
-        },
-      },
-    ],
-  ],
   testEnvironment: 'node',
   testRegex: "((\\.|/*.)(test))\\.js?$",
   transform: {},
