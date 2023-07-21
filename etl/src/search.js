@@ -211,6 +211,14 @@ export function isBetween(start, value, end) {
  *     * otherwise, replace the last z by aa e.g. zz -> zaa, zzz -> zzaa, ..., xzz -> xzaa
  *
  * If the optimization strategy is `speed`, the incrementation rules are as follows:
+ * * if there are 3 or more letters, remove all but the first two letters
+ * * if there are less than 3 letters, increment the last letter
+ * the incrementation rules are as follows:
+ * * if the token length is 1 or the last letter is between `a` and `z` increment it by one
+ *     * e.g. a -> b, b -> c, ..., x -> y; aa -> ab, ab -> ac, ..., ax -> ay
+ * * if the token length is 1 and the last letter is not between `a` and `z`, throw an error
+ * * if the token length is >1 and last letter is not between `a` and `z` increment the second last letter by one and remove the last letter
+ *    * e.g. az -> b, bz -> c, ..., xz -> y
  *
  * @param {string} token - the token to increment
  * @param {OptimizationStrategy} optimizationStrategy - the optimization strategy to use
@@ -220,32 +228,40 @@ export function isBetween(start, value, end) {
 export function incrementToken(token, optimizationStrategy) {
     switch (optimizationStrategy) {
         case OptimizationStrategy.accuracy:
-            if (optimizationStrategy === OptimizationStrategy.accuracy) {
-                const lastLetter = token[token.length - 1];
-                const secondLastLetter = token[token.length - 2];
+            const lastLetter = token[token.length - 1];
+            const secondLastLetter = token[token.length - 2];
 
-                if (isBetween('a', lastLetter, 'z')) {
-                    return token.slice(0, -1) + String.fromCharCode(lastLetter.charCodeAt(0) + 1);
-                } else if (!isBetween('a', lastLetter, 'z') && token.length === 1) {
-                    return token.slice(0, -1) + 'aa';
-                } else if (!isBetween('a', lastLetter, 'z') && isBetween('a', secondLastLetter, 'z')) {
-                    return token.slice(0, -2) + String.fromCharCode(secondLastLetter.charCodeAt(0) + 1);
-                } else if (!isBetween('a', lastLetter, 'z') && !isBetween('a', secondLastLetter, 'z')) {
-                    if (secondLastLetter < 'a') {
-                        return token.slice(0, -2) + 'aa';
-                    } else {
-                        return token.slice(0, -1) + 'aa';
-                    }
+            if (isBetween('a', lastLetter, 'z')) {
+                return token.slice(0, -1) + String.fromCharCode(lastLetter.charCodeAt(0) + 1);
+            } else if (!isBetween('a', lastLetter, 'z') && token.length === 1) {
+                return token.slice(0, -1) + 'aa';
+            } else if (!isBetween('a', lastLetter, 'z') && isBetween('a', secondLastLetter, 'z')) {
+                return token.slice(0, -2) + String.fromCharCode(secondLastLetter.charCodeAt(0) + 1);
+            } else if (!isBetween('a', lastLetter, 'z') && !isBetween('a', secondLastLetter, 'z')) {
+                if (secondLastLetter < 'a') {
+                    return token.slice(0, -2) + 'aa';
                 } else {
-                    throw new Error('Implementation defect: token incrementation failed for token ' + token);
+                    return token.slice(0, -1) + 'aa';
                 }
-            } else if (optimizationStrategy === OptimizationStrategy.speed) {
-                throw new Error('Not implemented');
             } else {
-                throw new Error(`Implementation defect: Unknown optimization strategy "${optimizationStrategy}"`);
+                throw new Error('Implementation defect: token incrementation failed for token ' + token);
             }
         case OptimizationStrategy.speed:
-            throw new Error('Not implemented');
+            if (token.length === 1 && token >= 'z') {
+                throw new Error('Implementation defect: wrap around is not allowed for single letter tokens');
+            }
+
+            let incremented = token;
+            if (incremented.length >= 3) {
+                incremented = incremented.slice(0, 2);
+            }
+            if (incremented[incremented.length - 1] < 'a') {
+                return incremented.slice(0, -1) + 'a';
+            } else if (incremented[incremented.length - 1] < 'z') {
+                return incremented.slice(0, -1) + String.fromCharCode(incremented.charCodeAt(incremented.length - 1) + 1);
+            } else {
+                throw new Error('Implementation defect: token incrementation failed for token ' + token);
+            }
         default:
             throw new Error(`Implementation defect: Unknown optimization strategy: "${optimizationStrategy}"`);
     }

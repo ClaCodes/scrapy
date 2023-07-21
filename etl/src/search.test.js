@@ -4,7 +4,10 @@ import {
     applySuggestions,
     calculateNextSearch,
     currentSearchValue,
-    isSearchExhausted, searchValueInternal, isBetween, OptimizationStrategy
+    isSearchExhausted,
+    searchValueInternal,
+    isBetween,
+    OptimizationStrategy
 } from "./search.js";
 
 describe('The search', () => {
@@ -63,32 +66,21 @@ describe('The search', () => {
         describe('and the optimization strategy is accuracy', () => {
 
             it('should increment the last letter of the token by one if it is between "a" and "z"', () => {
-                const tokens = [
-                    'a',
-                    'b',
-                    'y',
-                    'aa',
-                    'bb',
-                    'yy',
-                    'aaa',
-                    'bbb',
-                    'yyy',
+                const incrementSpecs = [
+                    ['a', 'b'],
+                    ['b', 'c'],
+                    ['y', 'z'],
+                    ['aa', 'ab'],
+                    ['bb', 'bc'],
+                    ['yy', 'yz'],
+                    ['aaa', 'aab'],
+                    ['bbb', 'bbc'],
+                    ['yyy', 'yyz'],
                 ];
 
-                const expected = [
-                    'b',
-                    'c',
-                    'z',
-                    'ab',
-                    'bc',
-                    'yz',
-                    'aab',
-                    'bbc',
-                    'yyz',
-                ];
-
-                tokens.forEach((token, index) => {
-                    expect(incrementToken(token, OptimizationStrategy.accuracy)).toEqual(expected[index]);
+                incrementSpecs.forEach(([token, expectedIncrement]) => {
+                    expect(incrementToken(token, OptimizationStrategy.accuracy))
+                        .toEqual(expectedIncrement);
                 })
             })
 
@@ -104,89 +96,112 @@ describe('The search', () => {
                     '|',
                 ];
 
-                tokens.forEach(
-                    (token) => expect(incrementToken(token, OptimizationStrategy.accuracy)).toEqual('aa')
-                );
-
-                expect(incrementToken('z', OptimizationStrategy.accuracy)).toEqual('aa');
+                tokens.forEach((token) => {
+                    expect(incrementToken(token, OptimizationStrategy.accuracy))
+                        .toEqual('aa');
+                });
             });
 
             it('should increment the second last letter by one and remove the last letter if the last letter is not between "a" and "z" and the second last letter is between "a" and "z"', () => {
-                const tokens = [
-                    'az',
-                    'bz',
-                    'yz',
-                    'aaz',
-                    'bbz',
-                    'yyz',
-                    'aaaz',
-                    'bbbz',
-                    'yyyz',
+                const incrementSpecs = [
+                    ['az', 'b'],
+                    ['bz', 'c'],
+                    ['yz', 'z'],
+                    ['aaz', 'ab'],
+                    ['bbz', 'bc'],
+                    ['yyz', 'yz'],
+                    ['aaaz', 'aab'],
+                    ['bbbz', 'bbc'],
+                    ['yyyz', 'yyz'],
                 ];
 
-                const expected = [
-                    'b',
-                    'c',
-                    'z',
-                    'ab',
-                    'bc',
-                    'yz',
-                    'aab',
-                    'bbc',
-                    'yyz',
-                ];
-
-                tokens.forEach((token, index) => {
-                    expect(incrementToken(token, OptimizationStrategy.accuracy)).toEqual(expected[index]);
+                incrementSpecs.forEach(([token, expectedIncrement]) => {
+                    expect(incrementToken(token, OptimizationStrategy.accuracy))
+                        .toEqual(expectedIncrement);
                 })
             });
 
 
             it('should replace the last "z" by "aa" if both the last and second letter are not between "a" and "z" and the second last letter is not before "a"', () => {
-                const tokens = [
-                    'zz',
-                    'zzz',
-                    'xzz',
-                    'zzzz',
-                    'zzzzz',
+                const incrementSpecs = [
+                    ['zz', 'zaa'],
+                    ['zzz', 'zzaa'],
+                    ['xzz', 'xzaa'],
+                    ['zzzz', 'zzzaa'],
+                    ['zzzzz', 'zzzzaa'],
                 ];
 
-                const expected = [
-                    'zaa',
-                    'zzaa',
-                    'xzaa',
-                    'zzzaa',
-                    'zzzzaa',
-                ];
-
-                tokens.forEach((token, index) => {
-                    expect(incrementToken(token, OptimizationStrategy.accuracy)).toEqual(expected[index]);
+                incrementSpecs.forEach(([token, expectedIncrement]) => {
+                    expect(incrementToken(token, OptimizationStrategy.accuracy))
+                        .toEqual(expectedIncrement);
                 });
             });
 
             it('should replace the last two letters by "aa" if both the last and second letter are not between "a" and "z" and the second last letter is before "a"', () => {
-                const tokens = [
-                    ' z',
-                    'z!z',
-                    'x1z',
-                    'zz?z',
-                    'zzz]z',
+                const incrementSpecs = [
+                    [' z', 'aa'],
+                    ['z!z', 'zaa'],
+                    ['x1z', 'xaa'],
+                    ['zz?z', 'zzaa'],
+                    ['zzz]z', 'zzzaa'],
                 ];
 
-                const expected = [
-                    'aa',
-                    'zaa',
-                    'xaa',
-                    'zzaa',
-                    'zzzaa',
-                ];
-
-                tokens.forEach((token, index) => {
-                    expect(incrementToken(token, OptimizationStrategy.accuracy)).toEqual(expected[index]);
+                incrementSpecs.forEach(([token, expectedIncrement]) => {
+                    expect(incrementToken(token, OptimizationStrategy.accuracy))
+                        .toEqual(expectedIncrement);
                 });
             });
         });
     })
+
+    describe('and the optimization strategy is speed', () => {
+
+        it('should throw an error if there is only one letters and it is after "z"', () => {
+            const tokensThatShouldThrow = [
+                'z',
+                '{',
+                // ... and all other letters after "z"
+            ];
+
+            tokensThatShouldThrow.forEach((token) => {
+                expect(() => incrementToken(token, OptimizationStrategy.speed))
+                    .toThrow('Implementation defect: wrap around is not allowed for single letter tokens');
+            });
+        });
+
+        it('should increment the last letter if there are <3 letters and the letter is before "z"', () => {
+            const incrementSpecs = [
+                ['1', 'a'], // before a
+                ['a', 'b'],
+                ['b', 'c'],
+                ['x', 'y'],
+                ['y', 'z'],
+                ['aa', 'ab'],
+                ['bb', 'bc'],
+                ['cd', 'ce'],
+                ['xx', 'xy'],
+                ['yy', 'yz'],
+            ];
+
+            incrementSpecs.forEach(([token, expectedIncrement]) => {
+                expect(incrementToken(token, OptimizationStrategy.speed)).toEqual(expectedIncrement);
+            });
+        });
+
+        it('should increment the second last letter and remove the rest if there are >=3 letters', () => {
+            const incrementSpecs = [
+                ['a1a', 'aa'],
+                ['baa', 'bb'],
+                ['cab', 'cb'],
+                ['dbz', 'dc'],
+                ['ec{', 'ed'],
+            ];
+
+            incrementSpecs.forEach(([token, expectedIncrement]) => {
+                expect(incrementToken(token, OptimizationStrategy.speed)).toEqual(expectedIncrement);
+            });
+        });
+    });
 
     describe('when applying the resulting suggestions', () => {
 
