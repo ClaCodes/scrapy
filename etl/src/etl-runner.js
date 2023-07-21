@@ -11,7 +11,7 @@ const loadConfig = {
 }
 
 await extractSchwinger(
-    createSearch('a', 'z', OptimizationStrategy.speed),
+    createSearch('aaa', 'zzz', OptimizationStrategy.mixed),
     fetchSchwinger,
     transformSchwinger,
     loadSchwingerToFile,
