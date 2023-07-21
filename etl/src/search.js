@@ -27,6 +27,7 @@ const JumpState = {
  * The search can be optimized for:
  * * `accuracy` - we search without any gaps in the search space, i.e. we can be sure to find all results
  * * `speed` - we search with gaps in the search space to speed up the search, but we might miss some results
+ * * `mixed` - we search without any gaps but limit the number of letters in the query to 3
  *
  * The optimization strategy is used to determine the next search value.
  * * If we optimize for `accuracy` we increment the least significant letter of the search value resp. jump by one.
@@ -39,6 +40,7 @@ const JumpState = {
  */
 export const OptimizationStrategy = {
     speed: 'speed',
+    mixed: 'mixed',
     accuracy: 'accuracy',
 }
 
@@ -104,6 +106,8 @@ export function createSearch(startToken, stopToken, optimizationStrategy) {
  *         * Otherwise, we set the state of the last jump to `exhausting`
  *     * Otherwise, we can leverage the suggestions and jump ahead to the common prefix of all suggestions incremented by one
  *
+ * No suggestions are used if the optimization strategy is `mixed`.
+ *
  * @param {Search} search - the search to update
  * @param {string[]} suggestions - the suggestions of the previous search
  *
@@ -111,6 +115,9 @@ export function createSearch(startToken, stopToken, optimizationStrategy) {
  *
  */
 export function applySuggestions(search, suggestions) {
+    if (search.optimizationStrategy === OptimizationStrategy.mixed) {
+        return search;
+    }
     if (
         suggestions.length === 0 &&
         search.jumps.length === 0
@@ -306,6 +313,23 @@ export function incrementToken(token, optimizationStrategy) {
                 return incremented.slice(0, -2) + String.fromCharCode(incremented[incremented.length - 2].charCodeAt(0) + 1);
             } else {
                 throw new Error('Implementation defect: token incrementation failed for token ' + token);
+            }
+        case OptimizationStrategy.mixed:
+            if (token.length !== 3) {
+                throw new Error('Implementation defect: mixed optimization strategy is only supported for 3 letter tokens');
+            }
+            const firstChar = token.charAt(0);
+            const secondLastChar = token.charAt(1);
+            const thirdChar = token.charAt(2);
+
+            if (thirdChar !== 'z') {
+                return token.substring(0, 2) + String.fromCharCode(thirdChar.charCodeAt(0) + 1);
+            } else if (secondLastChar !== 'z') {
+                return token.substring(0, 1) + String.fromCharCode(secondLastChar.charCodeAt(0) + 1) + 'a';
+            } else if (firstChar !== 'z') {
+                return String.fromCharCode(firstChar.charCodeAt(0) + 1) + 'aa';
+            } else {
+                throw new Error('Implementation defect: wrap around is not allowed');
             }
         default:
             throw new Error(`Implementation defect: Unknown optimization strategy: "${optimizationStrategy}"`);

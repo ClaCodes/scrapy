@@ -202,8 +202,44 @@ describe('The search', () => {
             });
         });
 
-    })
+        describe('and the optimization strategy is mixed', () => {
 
+            it('should throw an error the input is not of length 3', () => {
+                const tokensThatShouldThrow = [
+                    'a',
+                    'bb',
+                    'dddd',
+                ];
+
+                tokensThatShouldThrow.forEach((token) => {
+                    expect(() => incrementToken(token, OptimizationStrategy.mixed))
+                        .toThrow('Implementation defect: mixed optimization strategy is only supported for 3 letter tokens');
+                });
+            });
+
+            it('should throw an error the input is "zzz"', () => {
+                expect(() => incrementToken("zzz", OptimizationStrategy.mixed))
+                    .toThrow('Implementation defect: wrap around is not allowed');
+            });
+
+            it('should increment alphabetically if the token is in range', () => {
+                const incrementSpecs = [
+                    ['aaa', 'aab'],
+                    ['aab', 'aac'],
+                    ['aac', 'aad'],
+                    ['bbx', 'bby'],
+                    ['bby', 'bbz'],
+                    ['bbz', 'bca'],
+                    ['bzz', 'caa'],
+                    ['zzy', 'zzz'],
+                ];
+
+                incrementSpecs.forEach(([token, expectedIncrement]) => {
+                    expect(incrementToken(token, OptimizationStrategy.mixed)).toEqual(expectedIncrement);
+                });
+            });
+        });
+    })
 
     describe('when applying the resulting suggestions', () => {
 
@@ -1263,7 +1299,8 @@ describe('The search', () => {
             });
         })
     });
-});
+})
+;
 
 
 
