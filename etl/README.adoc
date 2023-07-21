@@ -1,0 +1,42 @@
+= ETL Module
+
+== Setup
+
+Install the dependencies:
+
+[source,bash]
+....
+pnpm i
+....
+
+If you would like to build the documentation, you will also need to install the documentation dependencies:
+
+[source,bash]
+....
+pnpm add -g jsdoc
+....
+
+== Testing
+
+Run the tests:
+
+[source,bash]
+....
+pnpm run test
+....
+
+or if you want to run the tests in watch mode:
+
+[source,bash]
+....
+pnpm run test:watch
+....
+
+== Run the ETL script
+
+Execute:
+
+[source,bash]
+....
+pnpm run extract
+....
