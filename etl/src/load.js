@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import {writeBatch, doc} from "firebase/firestore";
+import {storeSchwinger} from "./database.js";
 
 /**
  * Loads the transformed Schwinger into a file.
@@ -96,24 +96,5 @@ export async function loadSchwingerToDatabase(database, config) {
     const dataToBeUploaded = JSON.parse(fs.readFileSync(pathToStoreSchwingerFile, 'utf8'));
     console.log(`Loaded ${dataToBeUploaded.length} Schwinger from the specified file`);
 
-    const chunkSize = 500;
-    /** @type {Schwinger[][]} */
-    const chunks = [];
-    for (let i = 0; i < dataToBeUploaded.length; i += chunkSize) {
-        chunks.push(dataToBeUploaded.slice(i, i + chunkSize));
-    }
-    console.log(`Split the Schwinger into ${chunks.length} chunks of ${chunkSize} Schwinger each`);
-
-    let chunkCounter = 1;
-    for (const chunk of chunks) {
-        const batch = writeBatch(database);
-        for (const schwinger of chunk) {
-            const schwingerRef = doc(database, "schwinger", String(schwinger.id));
-            batch.set(schwingerRef, schwinger);
-        }
-        await batch.commit();
-        console.log(`Uploaded chunk ${chunkCounter++} of ${chunks.length}`);
-    }
-
-    console.log(`Successfully uploaded ${dataToBeUploaded.length} Schwinger to the database`);
+    await storeSchwinger(dataToBeUploaded);
 }
