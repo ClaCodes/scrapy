@@ -18,4 +18,4 @@ await extractSchwinger(
     loadConfig,
 );
 
-await storeSchwingerToDatabase(database, loadConfig);
+await storeSchwingerToDatabase(loadConfig);
