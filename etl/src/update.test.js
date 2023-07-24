@@ -1,4 +1,5 @@
-import {calculateLongestCommonSubsequence, filter} from "./update.js";
+import {calculateLongestCommonSubsequence, filter, updateSchwinger} from "./update.js";
+import {existingSchwinger} from "./test-data.js";
 
 describe('The update', () => {
 
@@ -102,6 +103,34 @@ describe('The update', () => {
 
     describe('when updating the existing data with the current data from the API', () => {
 
-        it.todo('test updateSchwinger and the functions required to implement it',)
+        it('should iterate over the existing data and update it if it does not matches the data of the API', async () => {
+            /** @type {UpdateConfig} */
+            const updateConfig = {chunkSize: 14};
+            /** @type {LoadConfig} */
+            const loadConfig = {
+                path: `./dist/data/${new Date().toISOString()}_schwinger.json`,
+            }
+            const loadAllSchwingerFake = Promise.resolve(existingSchwinger);
+            const fetchSchwingerFake = (longestCommonSubsequence) => Promise.resolve(
+                filter(existingSchwinger, longestCommonSubsequence, updateConfig.chunkSize)
+            );
+            const transformSchwingerFake = (alreadyTransformed) => alreadyTransformed;
+            const storeSchwingerToFileFake = () => ({success: true, numberOfRecords: 0});
+            const storeSchwingerToDatabaseFake = () => Promise.resolve();
+
+            // expect updateSchwinger not to throw, it is ansync use resolves.not.toThrow
+            await expect(
+                updateSchwinger(
+                    loadAllSchwingerFake,
+                    fetchSchwingerFake,
+                    transformSchwingerFake,
+                    storeSchwingerToFileFake,
+                    storeSchwingerToDatabaseFake,
+                    updateConfig,
+                    loadConfig,
+                )
+            )
+                .resolves.not.toThrow();
+        });
     });
 });

@@ -51,7 +51,7 @@ export async function storeSchwinger(data) {
  *
  * @returns {Promise<Schwinger[]>}
  */
-export async function loadSchwinger() {
+export async function loadAllSchwinger() {
     const schwingerSnapshot = await getDocs(collection(db, SCHWINGER_COLLECTION));
     const allSchwinger = []
     schwingerSnapshot.forEach((schwinger) => {

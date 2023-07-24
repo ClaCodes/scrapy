@@ -1,4 +1,4 @@
-import {loadSchwingerToFile} from "./load.js";
+import {storeSchwingerToFile} from "./load.js";
 
 describe('When loading data', () => {
 
@@ -11,7 +11,7 @@ describe('When loading data', () => {
 
             const transformed = 'not an array';
 
-            expect(() => loadSchwingerToFile(transformed, loadConfig))
+            expect(() => storeSchwingerToFile(transformed, loadConfig))
                 .toThrow('input must be an array');
         });
 
@@ -25,7 +25,7 @@ describe('When loading data', () => {
                 {id: 3, firstName: 'Marco', lastName: 'Abächerli'},
             ];
 
-            const result = loadSchwingerToFile(transformed, loadConfig);
+            const result = storeSchwingerToFile(transformed, loadConfig);
 
             expect(result).toEqual({
                 location: expect.any(String),

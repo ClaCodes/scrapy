@@ -3,7 +3,7 @@ import path from "path";
 import {storeSchwinger} from "./database.js";
 
 /**
- * Loads the transformed Schwinger into a file.
+ * Stores the transformed Schwinger to a file.
  *
  * @typedef {Object} LoadConfig
  * @property {string} path - The path to the file to store the Schwinger in
@@ -22,7 +22,7 @@ import {storeSchwinger} from "./database.js";
  * @param {LoadConfig} config - The configuration for storing the Schwinger
  * @returns {{LoadStats}|{PartialLoadStats}} - The statistics of the load
  */
-export function loadSchwingerToFile(transformedSchwinger, config) {
+export function storeSchwingerToFile(transformedSchwinger, config) {
     if (!Array.isArray(transformedSchwinger)) {
         throw new Error('input must be an array');
     }
@@ -75,18 +75,17 @@ export function loadSchwingerToFile(transformedSchwinger, config) {
 
 
 /**
- * Loads the transformed Schwinger into the database.
+ * Stores the transformed Schwinger to the database.
  *
  * Uploads all Schwinger of the specified file to the database using batch writes.
  * Since batch writes are limited to 500 operations, the Schwinger are split into chunks of 500.
  *
  *
- * @param {Firestore} database
  * @param {LoadConfig} config
  *
  */
 // TODO: check if this should be done with the server client lib: https://firebase.google.com/docs/firestore/client/libraries#server_client_libraries
-export async function loadSchwingerToDatabase(database, config) {
+export async function storeSchwingerToDatabase(config) {
     const pathToStoreSchwingerFile = path.join(process.cwd(), config.path);
     if (!fs.existsSync(pathToStoreSchwingerFile)) {
         throw new Error('Implementation defect: file to upload does not exist');
