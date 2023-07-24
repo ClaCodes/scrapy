@@ -210,10 +210,25 @@ export async function updateSchwinger(loadAllSchwinger, fetchSchwinger, transfor
 
         const latestSchwinger = transformSchwinger(response);
         console.log(`Got ${latestSchwinger.length} results for "${longestCommonSubsequence}".`)
-        dataToBeUpdated.splice(startOfChunkToBeUpdated, numberOfElementsInChunkToBeUpdated, ...latestSchwinger.slice(startOfChunkToBeUpdated, startOfChunkToBeUpdated + numberOfElementsInChunkToBeUpdated));
-        startOfChunkToBeUpdated += latestSchwinger.length;
+        if (latestSchwinger.length < chunkToBeUpdated.length) {
+            throw new Error(`Got ${latestSchwinger.length} results for "${longestCommonSubsequence}" but expected at least ${chunkToBeUpdated.length} results.`);
+        } else if (latestSchwinger.length === chunkToBeUpdated.length) {
+            console.log(`There are no new elements for "${longestCommonSubsequence}". Replacing the existing elements with the latest elements.`);
+            dataToBeUpdated.splice(startOfChunkToBeUpdated, numberOfElementsInChunkToBeUpdated, ...latestSchwinger);
+            startOfChunkToBeUpdated += chunkToBeUpdated.length;
+        } else {
+            if (areSchwingerArraysEqual(latestSchwinger.slice(0, chunkToBeUpdated.length), chunkToBeUpdated)) {
+                console.log(`There are no new elements for "${longestCommonSubsequence}". Replacing the existing elements with the latest elements.`);
+                dataToBeUpdated.splice(startOfChunkToBeUpdated, numberOfElementsInChunkToBeUpdated, ...(latestSchwinger.slice(0, chunkToBeUpdated.length)));
+                startOfChunkToBeUpdated += chunkToBeUpdated.length;
+            } else {
+                console.log(`There are new elements for "${longestCommonSubsequence}". Replacing the existing elements with the latest elements and adding the new elements.`);
+                dataToBeUpdated.splice(startOfChunkToBeUpdated, numberOfElementsInChunkToBeUpdated, ...latestSchwinger);
+                startOfChunkToBeUpdated += latestSchwinger.length;
+            }
+        }
     }
 
     storeSchwingerToFile(dataToBeUpdated, loadConfig);
-    // await storeSchwingerToDatabase(loadConfig);
+    await storeSchwingerToDatabase(loadConfig);
 }
