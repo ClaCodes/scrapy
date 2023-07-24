@@ -7,7 +7,7 @@ import {database} from "./database.js";
 
 /** @type {LoadConfig} */
 const loadConfig = {
-    path: `./dist/data/${new Date().toISOString()}_schwinger.json`,
+    path: `./dist/data/${new Date().toISOString()}_schwinger_extract.json`,
 }
 
 await extractSchwinger(
