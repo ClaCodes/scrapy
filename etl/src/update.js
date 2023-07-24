@@ -21,7 +21,7 @@ export function filter(data, token, maxResults) {
     return data
         .filter(schwinger => {
             let search = new RegExp(token.split('').join('.*'));
-            const name = schwinger.lastName.toLowerCase().concat(' ' + schwinger.firstName.toLowerCase())
+            const name = schwinger.lastName.toLowerCase().concat(' ' + schwinger.firstName?.toLowerCase())
             return search.test(name)
         })
         .sort((a, b) => a.lastName.localeCompare(b.lastName))
@@ -95,23 +95,30 @@ function longestCommonSubsequence(a, b) {
  * Calculates the longest common subsequence of the given Schwinger data.
  *
  * @param {Schwinger[]} data
- * @returns {any|string}
+ * @returns {string}
  */
 export function calculateLongestCommonSubsequence(data) {
-    const names = data.map(
-        schwinger => schwinger.lastName.toLowerCase().concat(' ' + schwinger.firstName.toLowerCase())
-    )
-
-    if (names.length < 2) {
-        return names[0];
+    if (data.length < 2) {
+        return data[0].lastName.toLowerCase().concat(' ' + data[0]?.firstName.toLowerCase())
+    } else {
+        if (data[0] === undefined) {
+            console.log('data[0] is undefined')
+        }
+        let lcsLastName = longestCommonSubsequence(data[0].lastName.toLowerCase(), data[1].lastName.toLowerCase());
+        let lcsFirstName = longestCommonSubsequence(data[0].firstName.toLowerCase(), data[1].firstName.toLowerCase());
+        for (let i = 2; i < data.length - 1; i++) {
+            lcsLastName = longestCommonSubsequence(lcsLastName, !!data[i].lastName ? data[i].lastName.toLowerCase() : '');
+            lcsFirstName = longestCommonSubsequence(lcsFirstName, !!data[i]?.firstName ? data[i].firstName.toLowerCase() : '');
+        }
+        if (!lcsLastName && !lcsFirstName) {
+            return null;
+        }
+        const lcs = lcsLastName.concat(' ' + lcsFirstName);
+        if (lcs < 'a') {
+            return 'a';
+        }
+        return lcs;
     }
-
-    let lcs = longestCommonSubsequence(names[0], names[1]);
-    for (let i = 2; i < names.length - 1; i++) {
-        lcs = longestCommonSubsequence(lcs, names[i]);
-    }
-
-    return lcs;
 }
 
 /**
@@ -184,13 +191,7 @@ export async function updateSchwinger(loadAllSchwinger, fetchSchwinger, transfor
             filteredData = filter(dataToBeUpdated, longestCommonSubsequence, numberOfElementsInChunkToBeUpdated);
         }
         while (!areSchwingerArraysEqual(chunkToBeUpdated, filteredData)) {
-            if (numberOfElementsInChunkToBeUpdated === 2) {
-                console.log('foo')
-            }
             numberOfElementsInChunkToBeUpdated--;
-            if (numberOfElementsInChunkToBeUpdated === 0) {
-                throw new Error('Could not find a common subsequence for the given chunk');
-            }
             chunkToBeUpdated = dataToBeUpdated.slice(startOfChunkToBeUpdated, startOfChunkToBeUpdated + numberOfElementsInChunkToBeUpdated);
             longestCommonSubsequence = calculateLongestCommonSubsequence(chunkToBeUpdated);
             if (!longestCommonSubsequence) {
@@ -208,15 +209,11 @@ export async function updateSchwinger(loadAllSchwinger, fetchSchwinger, transfor
         }
 
         const latestSchwinger = transformSchwinger(response);
-        if (latestSchwinger[latestSchwinger.length - 1] === dataToBeUpdated[startOfChunkToBeUpdated + latestSchwinger.length - 1] && !areSchwingerArraysEqual(chunkToBeUpdated, latestSchwinger)) {
-            console.log(`Got ${latestSchwinger.length} results for "${longestCommonSubsequence}". Updating the chunk with the ids [${latestSchwinger.map(schwinger => schwinger.id).join(', ')}]`)
-        } else {
-            console.log(`Got ${latestSchwinger.length} results for "${longestCommonSubsequence}". The chunk is already up to date.`)
-        }
-        dataToBeUpdated.splice(startOfChunkToBeUpdated, numberOfElementsInChunkToBeUpdated, ...latestSchwinger);
+        console.log(`Got ${latestSchwinger.length} results for "${longestCommonSubsequence}".`)
+        dataToBeUpdated.splice(startOfChunkToBeUpdated, numberOfElementsInChunkToBeUpdated, ...latestSchwinger.slice(startOfChunkToBeUpdated, startOfChunkToBeUpdated + numberOfElementsInChunkToBeUpdated));
         startOfChunkToBeUpdated += latestSchwinger.length;
     }
 
     storeSchwingerToFile(dataToBeUpdated, loadConfig);
-    await storeSchwingerToDatabase(loadConfig);
+    // await storeSchwingerToDatabase(loadConfig);
 }
