@@ -23,7 +23,9 @@ export function transformSchwinger(response) {
     const transformedSchwinger = [];
     for (const suggestion of response.suggestions) {
         const {value, data: {_id: id}} = suggestion;
-        const [lastName, firstName] = value.split(' ');
+        const lastSpaceIndex = value.lastIndexOf(' ');
+        const lastName = value.substring(0, lastSpaceIndex);
+        const firstName = value.substring(lastSpaceIndex + 1);
         transformedSchwinger.push({
             id,
             firstName,
