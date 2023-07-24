@@ -27,8 +27,8 @@ export async function storeSchwinger(data) {
     const chunkSize = 500;
     /** @type {Schwinger[][]} */
     const chunks = [];
-    for (let i = 0; i < dataToBeUploaded.length; i += chunkSize) {
-        chunks.push(dataToBeUploaded.slice(i, i + chunkSize));
+    for (let i = 0; i < data.length; i += chunkSize) {
+        chunks.push(data.slice(i, i + chunkSize));
     }
     console.log(`Split the Schwinger into ${chunks.length} chunks of size ${chunkSize} Schwinger each`);
 
@@ -43,7 +43,7 @@ export async function storeSchwinger(data) {
         console.log(`Uploaded chunk ${chunkCounter++} of ${chunks.length}`);
     }
 
-    console.log(`Successfully uploaded ${dataToBeUploaded.length} Schwinger to the database`);
+    console.log(`Successfully uploaded ${data.length} Schwinger to the database`);
 }
 
 /**
@@ -52,7 +52,7 @@ export async function storeSchwinger(data) {
  * @returns {Promise<Schwinger[]>}
  */
 export async function loadAllSchwinger() {
-    const schwingerSnapshot = await getDocs(collection(db, SCHWINGER_COLLECTION));
+    const schwingerSnapshot = await getDocs(collection(database, SCHWINGER_COLLECTION));
     const allSchwinger = []
     schwingerSnapshot.forEach((schwinger) => {
         allSchwinger.push(schwinger.data());
