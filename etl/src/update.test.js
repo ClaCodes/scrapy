@@ -74,23 +74,23 @@ describe('The update', () => {
                         {lastName: 'a', firstName: '',},
                         {lastName: 'ba', firstName: '',},
                     ],
-                    'a',
+                    null,
                 ],
                 [
                     [
-                        {lastName: 'abc', firstName: '',},
-                        {lastName: '', firstName: 'adc',},
-                        {lastName: 'ae', firstName: 'c',},
+                        {lastName: 'a', firstName: 'c',},
+                        {lastName: 'a', firstName: 'bc',},
+                        {lastName: 'a', firstName: 'dc',},
                     ],
-                    'ac',
+                    'a c',
                 ],
                 [
                     [
-                        {lastName: 'abc', firstName: '',},
-                        {lastName: 'axyzbefgbx', firstName: 'c',},
-                        {lastName: 'yeaiiewba', firstName: 'c',},
+                        {lastName: 'abc', firstName: 'bde',},
+                        {lastName: 'xa', firstName: 'cbde',},
+                        {lastName: 'eaiiaewba', firstName: 'cbde',},
                     ],
-                    'abc',
+                    'a bde',
                 ],
             ];
 
