@@ -17,6 +17,7 @@
   "scripts": {
     "doc": "jsdoc --verbose -c ./jsdoc.json",
     "extract": "node src/extract-runner.js",
+    "update": "node src/update-runner.js",
     "upload": "node ./src/upload.js",
     "test": "NODE_OPTIONS=--experimental-vm-modules pnpm jest",
     "test:watch": "pnpm run test -- --watch"
