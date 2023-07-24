@@ -86,14 +86,17 @@ export function storeSchwingerToFile(transformedSchwinger, config) {
  */
 // TODO: check if this should be done with the server client lib: https://firebase.google.com/docs/firestore/client/libraries#server_client_libraries
 export async function storeSchwingerToDatabase(config) {
-    const pathToStoreSchwingerFile = path.join(process.cwd(), config.path);
-    if (!fs.existsSync(pathToStoreSchwingerFile)) {
-        throw new Error('Implementation defect: file to upload does not exist');
-    }
-
-    /** @type {Schwinger[]} */
-    const dataToBeUploaded = JSON.parse(fs.readFileSync(pathToStoreSchwingerFile, 'utf8'));
-    console.log(`Loaded ${dataToBeUploaded.length} Schwinger from the specified file`);
-
+    const dataToBeUploaded = loadSchwingerFromFile(config);
     await storeSchwinger(dataToBeUploaded);
+}
+
+export function loadSchwingerFromFile(config) {
+    const pathToSchwingerFile = path.join(process.cwd(), config.path);
+    if (!fs.existsSync(pathToSchwingerFile)) {
+        throw new Error('Implementation defect: file to load does not exist');
+    }
+    /** @type {Schwinger[]} */
+    const data = JSON.parse(fs.readFileSync(pathToSchwingerFile, 'utf8'));
+    console.log(`Loaded ${data.length} Schwinger from the specified file`);
+    return data;
 }
