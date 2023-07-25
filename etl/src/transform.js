@@ -24,8 +24,22 @@ export function transformSchwinger(response) {
     for (const suggestion of response.suggestions) {
         const {value, data: {_id: id}} = suggestion;
         const lastSpaceIndex = value.lastIndexOf(' ');
-        const lastName = value.substring(0, lastSpaceIndex);
-        const firstName = value.substring(lastSpaceIndex + 1);
+        let lastName;
+        let firstName;
+        // On very rare occasions, the source data has a schwinger without a first name
+        if (lastSpaceIndex === -1) {
+            lastName = value;
+        }
+            // on very rare occasions, the source data has multiple identical first and last name combinations which are
+            // differentiated by a digit appended to the first name
+        else if (/\d/.test(value)) {
+            lastName = value.substring(0, lastSpaceIndex - 1);
+            firstName = value.substring(lastSpaceIndex - 1);
+
+        } else {
+            lastName = value.substring(0, lastSpaceIndex);
+            firstName = value.substring(lastSpaceIndex + 1);
+        }
         transformedSchwinger.push({
             id,
             firstName,

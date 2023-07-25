@@ -1,4 +1,4 @@
-import {existingSchwinger} from "./test-data.js";
+import {loadSchwingerFromFile} from "./load.js";
 
 function wait(milliseconds) {
     console.log(`waiting ${milliseconds / 1000} seconds`);
@@ -6,10 +6,27 @@ function wait(milliseconds) {
 }
 
 /**
- * Filters the data by the given token and returns the first maxResults which match the sequence defined by the token
+ * Normalizes the given string by removing all diacritics, e.g. 'ä' -> 'a', 'é' -> 'e', etc.
+ * Note: This needed for alignment with the API, which treats 'ä' and 'a' as the same character.
  *
- * e.g. token = 'ba' and maxResults = 2 will return the first two Schwinger where `lastName``firstName` match the sequence 'ba'.
- * The sequence in this case can be expressed as a regular expression: /b.*a/
+ * @param str
+ * @returns {string}
+ */
+function normalizeString(str) {
+    if (!str) {
+        return '';
+    }
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+/**
+ * Filters the data by the given token and returns the first maxResults which match the sequence defined by the token.
+ * Follows the filtering logic of the API. This means:
+ * * The token is split into two sequences by the first space character. The space becomes part of the second sequence if there is more than one space.
+ * * The number of leading spaces is reduced to one if there are two spaces. (sounds weird because it is)
+ * * Sequences are searched like this:
+ *     * if seq1 is in the last name, check if seq2 is in the first name
+ *     * if seq1 is in the first name, check if seq2 is in the last name
  *
  * @param {Schwinger[]} data
  * @param {string} token
@@ -20,75 +37,59 @@ function wait(milliseconds) {
 export function filter(data, token, maxResults) {
     return data
         .filter(schwinger => {
-            let search = new RegExp(token.split('').join('.*'));
-            const name = schwinger.lastName.toLowerCase().concat(' ' + schwinger.firstName?.toLowerCase())
-            return search.test(name)
+            const normalizedFirstName = ' ' + normalizeString(schwinger.firstName?.toLowerCase());
+            const normalizedLastName = normalizeString(schwinger.lastName?.toLowerCase());
+            const spaceIndex = token.indexOf(' ');
+            const firstSequence = token.substring(0, spaceIndex);
+            const secondSequence = token.substring(spaceIndex).replace(' ', '');
+
+            if (normalizedLastName.includes(firstSequence)) {
+                return normalizedFirstName.includes(secondSequence);
+            } else if (normalizedFirstName.includes(firstSequence)) {
+                return normalizedLastName.includes(secondSequence);
+            } else {
+                return false;
+            }
         })
         .sort((a, b) => a.lastName.localeCompare(b.lastName))
         .slice(0, maxResults);
 }
 
-/**
- * Calculates all subsequences of the given name.
- *
- * @param {string} name
- * @returns {string[]}
- */
-function calculateAllSubsequences(name) {
-    if (name.length === 0) {
-        return [''];
-    }
-
-    const firstChar = name[0];
-    const restOfString = name.slice(1);
-
-    const subsequencesOfRest = calculateAllSubsequences(restOfString);
-
-    let result = [];
-    subsequencesOfRest.forEach(subsequence => {
-        result.push(subsequence);
-        result.push(firstChar + subsequence);
-    });
-    return result;
-}
-
-function longestCommonSubsequence(a, b) {
-    var lcsMatrix = Array(b.length + 1)
+function longestCommonSubstring(a, b) {
+    var matrix = Array(b.length + 1)
         .fill(null)
         .map(() => Array(a.length + 1).fill(null));
 
     for (let letterInA = 0; letterInA <= a.length; letterInA += 1) {
-        lcsMatrix[0][letterInA] = 0;
+        matrix[0][letterInA] = 0;
     }
 
     for (let letterInB = 0; letterInB <= b.length; letterInB += 1) {
-        lcsMatrix[letterInB][0] = 0;
+        matrix[letterInB][0] = 0;
     }
+
+    let longestSubstringLength = 0;
+    let longestSubstringEndIndex = 0;
 
     for (let letterInB = 1; letterInB <= b.length; letterInB += 1) {
         for (let letterInA = 1; letterInA <= a.length; letterInA += 1) {
             if (a[letterInA - 1] === b[letterInB - 1]) {
-                lcsMatrix[letterInB][letterInA] = lcsMatrix[letterInB - 1][letterInA - 1] + 1;
+                matrix[letterInB][letterInA] = matrix[letterInB - 1][letterInA - 1] + 1;
+                if (matrix[letterInB][letterInA] > longestSubstringLength) {
+                    longestSubstringLength = matrix[letterInB][letterInA];
+                    longestSubstringEndIndex = letterInA;
+                }
             } else {
-                lcsMatrix[letterInB][letterInA] = Math.max(lcsMatrix[letterInB - 1][letterInA], lcsMatrix[letterInB][letterInA - 1]);
+                matrix[letterInB][letterInA] = 0;
             }
         }
     }
-    let lcs = '';
-    let i = b.length;
-    let j = a.length;
-    while (i > 0 && j > 0) {
-        if (a[j - 1] === b[i - 1]) {
-            lcs = a[j - 1] + lcs;
-            i -= 1;
-            j -= 1;
-        } else if (lcsMatrix[i - 1][j] > lcsMatrix[i][j - 1] || (lcsMatrix[i - 1][j] === lcsMatrix[i][j - 1] && a[j - 1] > b[i - 1])) {
-            i -= 1;
-        } else {
-            j -= 1;
-        }
+
+    if (longestSubstringLength === 0) {
+        return '';
     }
-    return lcs;
+
+    return a.slice(longestSubstringEndIndex - longestSubstringLength, longestSubstringEndIndex);
 }
 
 /**
@@ -101,14 +102,18 @@ export function calculateLongestCommonSubsequence(data) {
     if (data.length < 2) {
         return data[0].lastName.toLowerCase().concat(' ' + data[0]?.firstName.toLowerCase())
     } else {
-        if (data[0] === undefined) {
-            console.log('data[0] is undefined')
-        }
-        let lcsLastName = longestCommonSubsequence(data[0].lastName.toLowerCase(), data[1].lastName.toLowerCase());
-        let lcsFirstName = longestCommonSubsequence(data[0].firstName.toLowerCase(), data[1].firstName.toLowerCase());
+        let lcsLastName = longestCommonSubstring(
+            data[0].lastName.toLowerCase(),
+            data[1].lastName.toLowerCase()
+        );
+        // TODO: handle case where firstname is null
+        let lcsFirstName = longestCommonSubstring(
+            data[0].firstName.toLowerCase(),
+            data[1].firstName.toLowerCase()
+        );
         for (let i = 2; i < data.length - 1; i++) {
-            lcsLastName = longestCommonSubsequence(lcsLastName, !!data[i].lastName ? data[i].lastName.toLowerCase() : '');
-            lcsFirstName = longestCommonSubsequence(lcsFirstName, !!data[i]?.firstName ? data[i].firstName.toLowerCase() : '');
+            lcsLastName = longestCommonSubstring(lcsLastName, !!data[i].lastName ? data[i].lastName.toLowerCase() : '');
+            lcsFirstName = longestCommonSubstring(lcsFirstName, !!data[i]?.firstName ? data[i].firstName.toLowerCase() : '');
         }
         if (!lcsLastName && !lcsFirstName) {
             return null;
@@ -175,9 +180,18 @@ export const fetchSchwinger = async (longestCommonSubsequence) => {
  *
  */
 export async function updateSchwinger(loadAllSchwinger, fetchSchwinger, transformSchwinger, storeSchwingerToFile, storeSchwingerToDatabase, updateConfig, loadConfig) {
-    // const existingData = await loadAllSchwinger();
-    const dataToBeUpdated = existingSchwinger
-        .sort((a, b) => a.lastName.concat(' ' + a.firstName).toLowerCase().localeCompare(b.lastName.concat(' ' + b.firstName).toLowerCase()));
+    // const existingData = await loadSchwingerFromFile({
+    //     path: './dist/data/2023-07-24T21:40:03.160Z_schwinger_upload.json'
+    // })
+    const dataToBeUpdated = loadSchwingerFromFile({
+        path: './dist/data/2023-07-25T06:44:54.270Z_schwinger_upload.json'
+    }).sort(
+        (a, b) => a.lastName.concat(' ' + a.firstName).toLowerCase().localeCompare(b.lastName.concat(' ' + b.firstName).toLowerCase())
+    );
+
+    const index = dataToBeUpdated.findIndex(obj => obj.id === 7240);
+    console.log(`Index was ${index} of ${dataToBeUpdated.length} elements.`)
+
 
     let startOfChunkToBeUpdated = 0;
     while (startOfChunkToBeUpdated <= dataToBeUpdated.length - 1) {
@@ -188,16 +202,30 @@ export async function updateSchwinger(loadAllSchwinger, fetchSchwinger, transfor
         if (!longestCommonSubsequence) {
             filteredData = [];
         } else {
-            filteredData = filter(dataToBeUpdated, longestCommonSubsequence, numberOfElementsInChunkToBeUpdated);
+            filteredData = filter(dataToBeUpdated, longestCommonSubsequence, updateConfig.chunkSize);
         }
         while (!areSchwingerArraysEqual(chunkToBeUpdated, filteredData)) {
+            if (numberOfElementsInChunkToBeUpdated === 1) {
+                // we can not formulate a more specific query, so it is ok to continue with the update if
+                // the superfluous elements are lexically larger than the element to be updated
+                // this constraint can not be upheld because of e.g. the case where we query "bucher janik" but there is also "bucher nik" in the data
+                // const targetElement = normalizeSchwingerName(chunkToBeUpdated[0]);
+                // for (let i = 1; i < filteredData.length; i++) {
+                //     const superfluousElements = normalizeSchwingerName(filteredData[i]);
+                //     if (superfluousElements < targetElement) {
+                //         throw new Error(`Implementation defect: Query "${longestCommonSubsequence}" contains "${superfluousElements}" which is lexically smaller than the target element "${targetElement}".`)
+                //     }
+                // }
+                // we can not formulate a more specific query
+                break;
+            }
             numberOfElementsInChunkToBeUpdated--;
             chunkToBeUpdated = dataToBeUpdated.slice(startOfChunkToBeUpdated, startOfChunkToBeUpdated + numberOfElementsInChunkToBeUpdated);
             longestCommonSubsequence = calculateLongestCommonSubsequence(chunkToBeUpdated);
             if (!longestCommonSubsequence) {
                 filteredData = [];
             } else {
-                filteredData = filter(dataToBeUpdated, longestCommonSubsequence, numberOfElementsInChunkToBeUpdated);
+                filteredData = filter(dataToBeUpdated, longestCommonSubsequence, updateConfig.chunkSize);
             }
         }
         console.log(`Using "${longestCommonSubsequence}" as the next query. Expecting ${filteredData.length} results and the ids [${filteredData.map(schwinger => schwinger.id).join(', ')}]`)
@@ -213,19 +241,40 @@ export async function updateSchwinger(loadAllSchwinger, fetchSchwinger, transfor
         if (latestSchwinger.length < chunkToBeUpdated.length) {
             throw new Error(`Got ${latestSchwinger.length} results for "${longestCommonSubsequence}" but expected at least ${chunkToBeUpdated.length} results.`);
         } else if (latestSchwinger.length === chunkToBeUpdated.length) {
+            if (!areSchwingerArraysEqual(latestSchwinger, chunkToBeUpdated)) {
+                throw new Error(`Got ${latestSchwinger.length} results for "${longestCommonSubsequence}" but expected the same results as before.`);
+            }
             console.log(`There are no new elements for "${longestCommonSubsequence}". Replacing the existing elements with the latest elements.`);
             dataToBeUpdated.splice(startOfChunkToBeUpdated, numberOfElementsInChunkToBeUpdated, ...latestSchwinger);
-            startOfChunkToBeUpdated += chunkToBeUpdated.length;
+            startOfChunkToBeUpdated += numberOfElementsInChunkToBeUpdated;
         } else {
-            if (areSchwingerArraysEqual(latestSchwinger.slice(0, chunkToBeUpdated.length), chunkToBeUpdated)) {
-                console.log(`There are no new elements for "${longestCommonSubsequence}". Replacing the existing elements with the latest elements.`);
-                dataToBeUpdated.splice(startOfChunkToBeUpdated, numberOfElementsInChunkToBeUpdated, ...(latestSchwinger.slice(0, chunkToBeUpdated.length)));
-                startOfChunkToBeUpdated += chunkToBeUpdated.length;
-            } else {
-                console.log(`There are new elements for "${longestCommonSubsequence}". Replacing the existing elements with the latest elements and adding the new elements.`);
-                dataToBeUpdated.splice(startOfChunkToBeUpdated, numberOfElementsInChunkToBeUpdated, ...latestSchwinger);
-                startOfChunkToBeUpdated += latestSchwinger.length;
+            // the commented out block does not work because there are cases where the source data has elements where the frist name of some element is equal to the last name of another and and vice versa
+            // const lexicographicallySmallestSchwingerName = normalizeSchwingerName(chunkToBeUpdated[0]);
+            // for (let i = 0; i < latestSchwinger.length; i++) {
+            //     const latestSchwingerName = normalizeSchwingerName(latestSchwinger[i]);
+            //     if (latestSchwingerName < lexicographicallySmallestSchwingerName) {
+            //         throw new Error(`Implementation defect: Query "${longestCommonSubsequence}" contains "${latestSchwingerName}" which is lexically smaller than the lexically smallest in the chunk to update "${lexicographicallySmallestSchwingerName}".`)
+            //     }
+            // }
+            const idsInChunk = new Set(chunkToBeUpdated.map(obj => obj.id));
+            const allExistingIds = new Set(dataToBeUpdated.map(obj => obj.id));
+            const itemsToUpdate = latestSchwinger.filter(obj => idsInChunk.has(obj.id));
+            console.log(`Updating ${itemsToUpdate.length} elements in the chunk to update with the ids [${itemsToUpdate.map(obj => obj.id).join(', ')}]`);
+            for (const itemToUpdate of itemsToUpdate) {
+                const index = dataToBeUpdated.findIndex(obj => obj.id === itemToUpdate.id);
+                dataToBeUpdated[index] = itemToUpdate;
             }
+            const itemsToAdd = latestSchwinger.filter(obj => !allExistingIds.has(obj.id));
+            if (itemsToAdd.length === 0) {
+                console.log(`Query returned more elements than expected for "${longestCommonSubsequence}" but the unexpected elements are known already. Ignoring the known elements because they will be updated later.`);
+            } else {
+                console.log(`Adding ${itemsToAdd.length} elements with the ids [${itemsToAdd.map(obj => obj.id).join(', ')}]`);
+                dataToBeUpdated.splice(startOfChunkToBeUpdated + numberOfElementsInChunkToBeUpdated, 0, ...itemsToAdd);
+                dataToBeUpdated.sort(
+                    (a, b) => a.lastName.concat(' ' + a.firstName).toLowerCase().localeCompare(b.lastName.concat(' ' + b.firstName).toLowerCase())
+                );
+            }
+            startOfChunkToBeUpdated += numberOfElementsInChunkToBeUpdated;
         }
     }
 

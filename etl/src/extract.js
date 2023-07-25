@@ -1,4 +1,4 @@
-import {applySuggestions, calculateNextSearch, currentSearchValue} from "./search.js";
+import {applySuggestions, calculateNextSearch, currentSearchValue, OptimizationStrategy} from "./search.js";
 
 export const fetchSchwinger = async (url) => {
     return fetch(url)
@@ -21,15 +21,16 @@ function wait(milliseconds) {
 export async function extractSchwinger(initialSearch, fetchSchwinger, transformSchwinger, loadSchwinger, loadConfig) {
     let search = initialSearch;
     while (currentSearchValue(search) < search.stopToken) {
-        console.log('Current search is: \n', JSON.stringify(search));
+        const searchValue = search.optimizationStrategy === OptimizationStrategy.mixed ? currentSearchValue(search).substring(0, 2) + ' ' + currentSearchValue(search).substring(2) : currentSearchValue(search);
         const response = await fetchSchwinger(
-            `https://zwilch.ch/api/v2/schwinger/${encodeURIComponent(currentSearchValue(search))}`
+            `https://zwilch.ch/api/v2/schwinger/${encodeURIComponent(searchValue)}`
         );
         // wait because of rate limit
         if (response == null) {
             await wait(3000);
         } else {
             const transformedSchwinger = transformSchwinger(response);
+            console.log(`Extracted ${transformedSchwinger.length} Schwinger for search ${searchValue}`);
             const loadStats = await loadSchwinger(transformedSchwinger, loadConfig);
             console.log(loadStats);
             const suggestions = response['suggestions'] || [];

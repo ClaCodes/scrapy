@@ -7,7 +7,7 @@ import {storeSchwingerToDatabase, storeSchwingerToFile} from "./load.js";
 const updateConfig = {chunkSize: 14};
 /** @type {LoadConfig} */
 const loadConfig = {
-    path: `./dist/data/2023-07-24T16:34:18.224Z_schwinger_extract.json`,
+    path: `./dist/data/${new Date().toISOString()}_schwinger_update.json`,
 }
 await updateSchwinger(
     loadAllSchwinger,
@@ -18,3 +18,5 @@ await updateSchwinger(
     updateConfig,
     loadConfig,
 );
+
+process.exit(0);

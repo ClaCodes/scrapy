@@ -2,7 +2,6 @@ import {extractSchwinger, fetchSchwinger} from './extract.js';
 import {transformSchwinger} from "./transform.js";
 import {storeSchwingerToDatabase, storeSchwingerToFile} from "./load.js";
 import {createSearch, OptimizationStrategy} from "./search.js";
-import {database} from "./database.js";
 
 
 /** @type {LoadConfig} */
@@ -19,3 +18,5 @@ await extractSchwinger(
 );
 
 await storeSchwingerToDatabase(loadConfig);
+
+process.exit(0);

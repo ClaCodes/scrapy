@@ -227,7 +227,6 @@ export function applySuggestions(search, suggestions) {
                     }
                 ],
             };
-            throw new Error('Implementation defect: should not be reachable')
         default:
             throw new Error(`Unknown optimization strategy: ${search.optimizationStrategy}`);
     }
